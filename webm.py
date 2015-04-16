@@ -270,7 +270,7 @@ def _encode(options, passn):
     if passn == 1:
         args += ['-an']
     else:
-        args += ['-c:a', 'libopus', '-b:a', ab]
+        args += ['-c:a', 'libopus', '-b:a', ab, '-ac', '2']
 
     # Output.
     args += ['-f', 'webm', '-y', outfile]
