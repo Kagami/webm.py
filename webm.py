@@ -7,6 +7,7 @@ features:
   - encodes input video to webm container with VP9 and Opus
   - uses two-pass encode with the settings recommended by the developers
   - fits output file to the given size limit
+  - allows to specify video/audio streams and external audio track
 
 dependencies:
   - Python 2.7+ or 3.2+ (using: {pythonv})
@@ -14,13 +15,13 @@ dependencies:
 """
 
 # TODO:
-#     * Option to disable audio
-#     * Option to strip metadata
 #     * CRF/CQ/BQ modes
 #     * Burn subtitles
-#     * Support for VP8 and Vorbis
+#     * Limit quality
 #     * Fit audio to limit
-#     * Seeking/cropping the video
+#     * Option to disable audio
+#     * Option to strip metadata
+#     * Seeking/cropping the video with mpv
 
 from __future__ import absolute_import
 from __future__ import division
