@@ -6,7 +6,7 @@ convert videos to webm format using ffmpeg
 features:
   - encodes input video to webm container with VP9 and Opus
   - uses two-pass encode with the settings recommended by the developers
-  - fits video to the given size
+  - fits output file to the given size limit
 
 dependencies:
   - Python 2.7+ or 3.2+ (using: {pythonv})
