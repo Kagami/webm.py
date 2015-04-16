@@ -16,7 +16,6 @@ dependencies:
 # TODO:
 #     * Accept external audio file
 #     * Option to disable audio
-#     * Stream mapping
 #     * Option to strip metadata
 #     * CRF/CQ/BQ modes
 #     * Burn subtitles
@@ -167,6 +166,12 @@ def process_options(verinfo):
     parser.add_argument(
         '-ab', metavar='bitrate', default=64, type=int,
         help='audio bitrate in kbits (default: %(default)s)')
+    parser.add_argument(
+        '-vs', metavar='videostream', type=int,
+        help='video stream number to use (default: best)')
+    parser.add_argument(
+        '-as', metavar='audiostream', type=int,
+        help='audio stream number to use (default: best)')
     options = parser.parse_args()
     if options.t is not None and options.to is not None:
         parser.error('-t and -to are mutually exclusive')
@@ -275,6 +280,14 @@ def _encode(options, passn):
         args += ['-t', options.t]
     elif options.to is not None:
         args += ['-to', options.to]
+
+    # Streams.
+    if options.vs is not None or getattr(options, 'as') is not None:
+        vstream = 0 if options.vs is None else options.vs
+        args += ['-map', '0:{}'.format(vstream)]
+        astream = getattr(options, 'as')
+        astream = 1 if astream is None else astream
+        args += ['-map', '0:{}'.format(astream)]
 
     # Video.
     args += [
