@@ -181,7 +181,13 @@ def process_options(verinfo):
         help='external audio file to use\n'
              'if specified, its first stream will be muxed into resulting\n'
              'file unless -as is also given')
-    options = parser.parse_args()
+    args = sys.argv[1:]
+    if _PY2:
+        # Convert command line arguments to unicode.
+        # See: <http://stackoverflow.com/q/4012571>,
+        # <https://bugs.python.org/issue2128> for details.
+        args = [arg.decode(sys.stdin.encoding) for arg in args]
+    options = parser.parse_args(args)
     # Don't rewrite the input file.
     if options.outfile is None:
         if options.infile[:-5] == '.webm':
@@ -404,7 +410,7 @@ def print_stats(options, start):
         else:
             sizeinfo += ', underweight: {} B'.format(limit - size)
     print(sizeinfo, file=sys.stderr)
-    runtime = round(time.time() - start)
+    runtime = int(round(time.time() - start))
     if runtime > 60:
         runtime = '{}m{}s'.format(runtime//60, runtime%60)
     else:
