@@ -186,7 +186,7 @@ def _get_input_duration(options):
     try:
         dur = re.search(r'\bDuration: ([^,]+)', out).group(1)
     except Exception as exc:
-        print(exc)
+        print(exc, file=sys.stderr)
         raise Exception('Failed to parse duration of input file')
     induration = _parse_time(dur)
     # Validate ranges.
@@ -232,7 +232,6 @@ def _calc_target_bitrate(options):
 
 
 def _encode(options, passn):
-    passn_s = _TEXT_TYPE(passn)
     logfile = options.logfile[:-6]
     vb = '{:.2f}k'.format(options.vb)
     ab = '{}k'.format(options.ab)
@@ -253,7 +252,7 @@ def _encode(options, passn):
     # Video.
     args += [
         '-sn',
-        '-pass', passn_s, '-passlogfile', logfile,
+        '-pass', _TEXT_TYPE(passn), '-passlogfile', logfile,
         '-c:v', 'libvpx-vp9', '-b:v', vb,
         '-threads', threads, '-speed', speed,
         '-tile-columns', '6', '-frame-parallel', '1',
