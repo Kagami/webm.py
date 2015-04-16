@@ -242,9 +242,9 @@ def _get_input_duration(options):
             raise Exception(
                 'End position {} too far in the future '
                 '(input has only {} duration)'.format(options.to, dur))
-        if endpos >= shift:
+        if endpos <= shift:
             raise Exception(
-                'End position is bigger or equal than the input shift')
+                'End position is less or equal than the input seek')
     return induration
 
 
