@@ -157,7 +157,7 @@ def process_options(verinfo):
         help='filesize limit in mebibytes (default: 8)\n'
              '-l and -vb are mutually exclusive')
     parser.add_argument(
-        '-vb', metavar='bitrate', type=int,
+        '-vb', metavar='bitrate', type=float,
         help='video bitrate in kbits')
     parser.add_argument(
         '-ab', metavar='bitrate', default=64, type=int,
@@ -309,7 +309,7 @@ def encode(options):
 def print_stats(options, start):
     print('='*50, file=sys.stderr)
     print('Output file: {}'.format(options.outfile), file=sys.stderr)
-    print('Output bitrate: {}k'.format(options.vb), file=sys.stderr)
+    print('Output bitrate: {:.2f}k'.format(options.vb), file=sys.stderr)
     size = os.path.getsize(options.outfile)
     sizeinfo = 'Output file size: {} B'.format(size)
     if size > 1024:
