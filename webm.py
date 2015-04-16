@@ -182,7 +182,7 @@ def _parse_time(time):
 
 
 def _get_input_duration(options):
-    out = _ffmpeg_output(['ffmpeg', '-hide_banner', '-i', options.infile])
+    out = _ffmpeg_output(['-hide_banner', '-i', options.infile])
     out = out['stderr']
     try:
         dur = re.search(r'\bDuration: ([^,]+)', out).group(1)
