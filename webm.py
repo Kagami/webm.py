@@ -19,7 +19,6 @@ dependencies:
 #     * Stream mapping
 #     * Option to strip metadata
 #     * CRF/CQ/BQ modes
-#     * Encode only part of video with the full bitrate
 #     * Burn subtitles
 #     * Support for VP8 and Vorbis
 #     * Fit audio to limit
@@ -141,6 +140,12 @@ def process_options(verinfo):
         help='stop writing the output at position\n'
              'position may be either in seconds or in "hh:mm:ss[.xxx]" form')
     parser.add_argument(
+        '-tt', metavar='duration',
+        help='use given duration to calculate the bitrate\n'
+             'duration may be either in seconds or in "hh:mm:ss[.xxx]" form\n'
+             'pass zero to use the full duration of video\n'
+             '-tt and -vb are mutually exclusive')
+    parser.add_argument(
         '-ow', metavar='width', type=int,
         help='output width, e.g. 1280\n'
              'when overriding either the default width or height, the output\n'
@@ -165,6 +170,8 @@ def process_options(verinfo):
     options = parser.parse_args()
     if options.t is not None and options.to is not None:
         parser.error('-t and -to are mutually exclusive')
+    if options.tt is not None and options.vb is not None:
+        parser.error('-tt and -vb are mutually exclusive')
     if options.vb is None:
         if options.l is _NoLimit:
             options.l = 8
@@ -232,7 +239,11 @@ def _get_input_duration(options):
 
 
 def _calc_target_bitrate(options):
-    if options.t is not None:
+    if options.tt is not None:
+        outduration = _parse_time(options.tt)
+        if outduration == 0:
+            outduration = options.induration
+    elif options.t is not None:
         outduration = _parse_time(options.t)
     elif options.ss is not None:
         if options.to is not None:
