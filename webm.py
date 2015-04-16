@@ -47,21 +47,25 @@ _PY2 = sys.version_info[0] == 2
 _TEXT_TYPE = unicode if _PY2 else str
 
 
-def _ffmpeg(args, debug=False):
+def _ffmpeg(args, check_code=True, debug=False):
     args = ['ffmpeg'] + args
     if debug:
         print('='*50 + '\n' + ' '.join(args) + '\n' + '='*50, file=sys.stderr)
     p = subprocess.Popen(args)
     p.communicate()
+    if check_code and p.returncode != 0:
+        raise Exception('FFmpeg exited with error')
     return {'code': p.returncode}
 
 
-def _ffmpeg_output(args, debug=False):
+def _ffmpeg_output(args, check_code=True, debug=False):
     args = ['ffmpeg'] + args
     if debug:
         print('='*50 + '\n' + ' '.join(args) + '\n' + '='*50, file=sys.stderr)
     p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
+    if check_code and p.returncode != 0:
+        raise Exception('FFmpeg exited with error')
     out = out.decode(sys.stdout.encoding)
     err = err.decode(sys.stderr.encoding)
     return {'stdout': out, 'stderr': err, 'code': p.returncode}
@@ -181,8 +185,9 @@ def _parse_time(time):
 
 
 def _get_input_duration(options):
-    out = _ffmpeg_output(['-hide_banner', '-i', options.infile])
-    out = out['stderr']
+    out = _ffmpeg_output(
+        ['-hide_banner', '-i', options.infile],
+        check_code=False)['stderr']
     try:
         dur = re.search(r'\bDuration: ([^,]+)', out).group(1)
     except Exception:
@@ -275,9 +280,7 @@ def _encode(options, passn):
     # Output.
     args += ['-f', 'webm', '-y', outfile]
 
-    code = _ffmpeg(args, debug=True)['code']
-    if code != 0:
-        raise Exception('FFmpeg exited with error')
+    _ffmpeg(args, debug=True)
 
 
 def encode(options):
