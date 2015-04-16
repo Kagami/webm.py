@@ -14,7 +14,6 @@ dependencies:
 """
 
 # TODO:
-#     * Accept external audio file
 #     * Option to disable audio
 #     * Option to strip metadata
 #     * CRF/CQ/BQ modes
@@ -168,10 +167,15 @@ def process_options(verinfo):
         help='audio bitrate in kbits (default: %(default)s)')
     parser.add_argument(
         '-vs', metavar='videostream', type=int,
-        help='video stream number to use (default: best)')
+        help='video stream number to use (default: best/suitable)')
     parser.add_argument(
         '-as', metavar='audiostream', type=int,
-        help='audio stream number to use (default: best)')
+        help='audio stream number to use (default: best/suitable)')
+    parser.add_argument(
+        '-af', metavar='audiofile',
+        help='external audio file to use\n'
+             'if specified, its first stream will be muxed into resulting\n'
+             'file unless -as is also given')
     options = parser.parse_args()
     if options.t is not None and options.to is not None:
         parser.error('-t and -to are mutually exclusive')
@@ -276,18 +280,24 @@ def _encode(options, passn):
     if options.ss is not None:
         args += ['-ss', options.ss]
     args += ['-i', options.infile]
+    if options.af is not None:
+        args += ['-i', options.af]
     if options.t is not None:
         args += ['-t', options.t]
     elif options.to is not None:
         args += ['-to', options.to]
 
     # Streams.
-    if options.vs is not None or getattr(options, 'as') is not None:
+    if (options.vs is not None
+            or getattr(options, 'as') is not None
+            or options.af is not None):
         vstream = 0 if options.vs is None else options.vs
         args += ['-map', '0:{}'.format(vstream)]
+        ainput = 0 if options.af is None else 1
         astream = getattr(options, 'as')
-        astream = 1 if astream is None else astream
-        args += ['-map', '0:{}'.format(astream)]
+        if astream is None:
+            astream = 1 if options.af is None else 0
+        args += ['-map', '{}:{}'.format(ainput, astream)]
 
     # Video.
     args += [
