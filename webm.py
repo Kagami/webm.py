@@ -185,8 +185,7 @@ def _get_input_duration(options):
     out = out['stderr']
     try:
         dur = re.search(r'\bDuration: ([^,]+)', out).group(1)
-    except Exception as exc:
-        print(exc, file=sys.stderr)
+    except Exception:
         raise Exception('Failed to parse duration of input file')
     induration = _parse_time(dur)
     # Validate ranges.
