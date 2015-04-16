@@ -267,13 +267,14 @@ def _calc_target_bitrate(options):
     return round(options.l * 8192 / outduration - options.ab)
 
 
-def _encode(options, passn):
+def _encode(options, firstpass):
+    passn = '1' if firstpass else '2'
     logfile = options.logfile[:-6]
     vb = '{}k'.format(options.vb)
     ab = '{}k'.format(options.ab)
     threads = _TEXT_TYPE(options.threads)
-    speed = '4' if passn == 1 else '1'
-    outfile = os.devnull if passn == 1 else options.outfile
+    speed = '4' if firstpass else '1'
+    outfile = os.devnull if firstpass else options.outfile
 
     # Input.
     args = ['-hide_banner']
@@ -302,7 +303,7 @@ def _encode(options, passn):
     # Video.
     args += [
         '-sn',
-        '-pass', _TEXT_TYPE(passn), '-passlogfile', logfile,
+        '-pass', passn, '-passlogfile', logfile,
         '-c:v', 'libvpx-vp9', '-b:v', vb,
         '-threads', threads, '-speed', speed,
         '-tile-columns', '6', '-frame-parallel', '1',
@@ -318,7 +319,7 @@ def _encode(options, passn):
         args += ['-vf', scale, '-sws_flags', options.sws]
 
     # Audio.
-    if passn == 1:
+    if firstpass:
         args += ['-an']
     else:
         args += ['-c:a', 'libopus', '-b:a', ab, '-ac', '2']
@@ -336,8 +337,8 @@ def encode(options):
         options.vb = _calc_target_bitrate(options)
     options.threads = multiprocessing.cpu_count()
     options.logfile = tempfile.mkstemp(suffix='-0.log')[1]
-    _encode(options, 1)
-    _encode(options, 2)
+    _encode(options, firstpass=True)
+    _encode(options, firstpass=False)
 
 
 def print_stats(options, start):
