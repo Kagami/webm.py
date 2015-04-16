@@ -36,7 +36,6 @@ import sys
 import time
 import tempfile
 import subprocess
-import multiprocessing
 
 
 __title__ = 'webm.py'
@@ -284,6 +283,7 @@ def _encode(options, passn):
 
 
 def encode(options):
+    import multiprocessing
     options.induration = _get_input_duration(options)
     if options.vb is None:
         options.vb = _calc_target_bitrate(options)
