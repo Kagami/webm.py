@@ -35,6 +35,7 @@ import re
 import sys
 import time
 import tempfile
+import traceback
 import subprocess
 
 
@@ -45,6 +46,10 @@ __license__ = 'CC0'
 
 _PY2 = sys.version_info[0] == 2
 _TEXT_TYPE = unicode if _PY2 else str
+
+
+def _is_verbose(options):
+    return getattr(options, 'verbose', False)
 
 
 def _ffmpeg(args, check_code=True, debug=False):
@@ -112,6 +117,9 @@ def process_options(verinfo):
         '-V', '--version',
         action='version',
         version='%(prog)s ' + __version__)
+    parser.add_argument(
+        '-v', action='store_true', dest='verbose',
+        help='Enable verbose mode')
     parser.add_argument(
         '-i', dest='infile', metavar='infile', required=True,
         help='input file')
@@ -323,6 +331,8 @@ def cleanup(options):
         if hasattr(options, 'logfile'):
             os.remove(options.logfile)
     except Exception as exc:
+        if _is_verbose(options):
+            exc = '\n\n' + traceback.format_exc()[:-1]
         print('Error during cleanup: {}'.format(exc), file=sys.stderr)
 
 
@@ -335,6 +345,8 @@ def main():
         encode(options)
         print_stats(options, start)
     except Exception as exc:
+        if _is_verbose(options):
+            exc = '\n\n' + traceback.format_exc()[:-1]
         err = 'Cannot proceed due to the following error: {}'.format(exc)
         print(err, file=sys.stderr)
         sys.exit(1)
