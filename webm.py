@@ -92,7 +92,7 @@ def check_dependencies():
             raise Exception('FFmpeg version must be 2+, '
                             'using: {}'.format(ffmpegv))
     else:
-        # Most probably version from git. Don't do anything.
+        # Most probably version from git. Do nothing.
         pass
     codecout = _ffmpeg_output(['-codecs'])['stdout']
     if not re.search(r'encoders:.*\blibvpx-vp9\b', codecout):
