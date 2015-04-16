@@ -7,7 +7,7 @@ features:
   - encodes input video to webm container with VP9 and Opus
   - uses two-pass encode with the settings recommended by the developers
   - fits output file to the given size limit
-  - allows to specify video/audio streams and external audio track
+  - allows to select video/audio streams and external audio track
 
 dependencies:
   - Python 2.7+ or 3.2+ (using: {pythonv})
@@ -21,7 +21,7 @@ dependencies:
 #     * Fit audio to limit
 #     * Option to disable audio
 #     * Option to strip metadata
-#     * Seeking/cropping the video with mpv
+#     * Interactive seeking/cropping with mpv
 
 from __future__ import absolute_import
 from __future__ import division
@@ -87,6 +87,8 @@ def check_dependencies():
         ffmpegv = re.match(r'ffmpeg version (\S+)', line).group(1)
     except Exception:
         raise Exception('Cannot parse FFmpeg version')
+    # NOTE: Checking only for '^x.y.z', possible non-numeric symbols
+    # after 'z' don't matter.
     if re.match(r'\d+\.\d+\.\d+', ffmpegv):
         if int(ffmpegv.split('.', 1)[0]) < 2:
             raise Exception('FFmpeg version must be 2+, '
@@ -126,7 +128,7 @@ def process_options(verinfo):
         'outfile', nargs='?',
         help='output file, e.g. output.webm\n'
             'defaults to infile_hh:mm:ss[.x]-hh:mm:ss[.x].webm if you\n'
-            'specified a starting time and ending time, otherwise defaults\n'
+            'specified a starting or ending time, otherwise defaults\n'
             'to infile.webm')
     parser.add_argument(
         '-ss', metavar='position',
