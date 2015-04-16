@@ -44,6 +44,7 @@ __license__ = 'CC0'
 
 _PY2 = sys.version_info[0] == 2
 _TEXT_TYPE = unicode if _PY2 else str
+_NUM_TYPES = (int, long, float) if _PY2 else (int, float)
 
 
 def _is_verbose(options):
@@ -120,10 +121,13 @@ def process_options(verinfo):
         help='Enable verbose mode')
     parser.add_argument(
         '-i', dest='infile', metavar='infile', required=True,
-        help='input file')
+        help='input file, e.g. infile.mkv (required)')
     parser.add_argument(
-        'outfile',
-        help='output file')
+        'outfile', nargs='?',
+        help='output file, e.g. output.webm\n'
+            'defaults to infile_hh:mm:ss[.x]-hh:mm:ss[.x].webm if you\n'
+            'specified a starting time and ending time, otherwise defaults\n'
+            'to infile.webm')
     parser.add_argument(
         '-ss', metavar='position',
         help='seek in input file to the given position\n'
@@ -178,6 +182,13 @@ def process_options(verinfo):
              'if specified, its first stream will be muxed into resulting\n'
              'file unless -as is also given')
     options = parser.parse_args()
+    # Don't rewrite the input file.
+    if options.outfile is None:
+        if options.infile[:-5] == '.webm':
+            parser.error('Specify output file please')
+    else:
+        if options.infile == options.outfile:
+            parser.error('Specify another output file please')
     if options.t is not None and options.to is not None:
         parser.error('-t and -to are mutually exclusive')
     if options.tt is not None and options.vb is not None:
@@ -195,6 +206,8 @@ def process_options(verinfo):
 
 
 def _parse_time(time):
+    if isinstance(time, _NUM_TYPES):
+        return time
     # hh:mm:ss[.xxx] -> (hh:(mm)):(ss.xxx)
     m = re.match(r'(?:(\d+):(?:(\d+)+:)?)?(\d+(?:\.\d+)?)$', time)
     if not m:
@@ -246,6 +259,36 @@ def _get_input_duration(options):
             raise Exception(
                 'End position is less or equal than the input seek')
     return induration
+
+
+def _get_timestamp(duration):
+    idur = int(duration)
+    ts = '{:02d}:{:02d}:{:02d}'.format(idur//3600, idur%3600//60, idur%60)
+    frac = round(duration % 1, 1)
+    if frac >= 0.1:
+        ts += _TEXT_TYPE(frac)[1:]
+    return ts
+
+
+def _get_output_filename(options):
+    name = os.path.basename(options.infile)
+    name = os.path.splitext(name)[0]
+    if (options.ss is not None or
+            options.t is not None or
+            options.to is not None):
+        name += '_'
+        shift = 0 if options.ss is None else _parse_time(options.ss)
+        name += _get_timestamp(shift)
+        name += '-'
+        if options.t:
+            endtime = shift + _parse_time(options.t)
+        elif options.tt:
+            endtime = _parse_time(options.tt)
+        else:
+            endtime = options.induration
+        name += _get_timestamp(endtime)
+    name += '.webm'
+    return name
 
 
 def _calc_target_bitrate(options):
@@ -334,6 +377,8 @@ def _encode(options, firstpass):
 def encode(options):
     import multiprocessing
     options.induration = _get_input_duration(options)
+    if options.outfile is None:
+        options.outfile = _get_output_filename(options)
     if options.vb is None:
         options.vb = _calc_target_bitrate(options)
     options.threads = multiprocessing.cpu_count()
