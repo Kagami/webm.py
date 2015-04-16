@@ -168,8 +168,12 @@ def process_options(verinfo):
     if options.vb is None:
         if options.l is _NoLimit:
             options.l = 8
+        elif not options.l:
+            parser.error('Bad limit value')
     elif options.l is not _NoLimit:
         parser.error('-l and -vb are mutually exclusive')
+    else:
+        options.l = 0
     return options
 
 
@@ -312,11 +316,12 @@ def print_stats(options, start):
         sizeinfo += ', {:.2f} KiB'.format(size/1024)
     if size > 1024 * 1024:
         sizeinfo += ', {:.2f} MiB'.format(size/1024/1024)
-    limit = options.l * 1024 * 1024
-    if size > limit:
-        sizeinfo += ', overweight: {} B'.format(size - limit)
-    else:
-        sizeinfo += ', underweight: {} B'.format(limit - size)
+    if options.l:
+        limit = options.l * 1024 * 1024
+        if size > limit:
+            sizeinfo += ', overweight: {} B'.format(size - limit)
+        else:
+            sizeinfo += ', underweight: {} B'.format(limit - size)
     print(sizeinfo, file=sys.stderr)
     runtime = round(time.time() - start)
     if runtime > 60:
