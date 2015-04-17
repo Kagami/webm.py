@@ -31,13 +31,14 @@ examples:
 
 # TODO:
 #     * Burn subtitles
-#     * Limit quality
+#     * Quality limits
 #     * Best quality mode
 #     * Fit audio to limit
 #     * Option to disable audio
 #     * Option to strip metadata
 #     * Interactive seeking/cropping with mpv
 #     * Optionally use mkvmerge for muxing
+#     * Accept image/gif as video source
 
 from __future__ import absolute_import
 from __future__ import division
