@@ -176,10 +176,14 @@ def process_options(verinfo):
              'position may be either in seconds or in "hh:mm:ss[.xxx]" form')
     parser.add_argument(
         '-tt', metavar='duration',
-        help='use given duration to calculate the bitrate\n'
+        help='use given fake duration to calculate the bitrate\n'
              'duration may be either in seconds or in "hh:mm:ss[.xxx]" form\n'
              'pass zero to use the full duration of video\n'
-             '-tt and -vb are mutually exclusive')
+             '-tt, -tot and -vb are mutually exclusive')
+    parser.add_argument(
+        '-tot', metavar='position',
+        help='use given fake ending time to calculate the bitrate\n'
+             'position may be either in seconds or in "hh:mm:ss[.xxx]" form')
     parser.add_argument(
         '-ow', metavar='width', type=int,
         help='output width, e.g. 1280\n'
@@ -235,8 +239,10 @@ def process_options(verinfo):
         parser.error('Specify another output file please')
     if options.t is not None and options.to is not None:
         parser.error('-t and -to are mutually exclusive')
-    if options.tt is not None and options.vb is not None:
-        parser.error('-tt and -vb are mutually exclusive')
+    if ((options.tt is not None and options.vb is not None) or
+            (options.tot is not None and options.vb is not None) or
+            (options.tt is not None and options.tot is not None)):
+        parser.error('-tt, -tot and -vb are mutually exclusive')
     if options.vb is None:
         if options.l is _NoLimit:
             options.l = 8
@@ -280,6 +286,7 @@ def _get_input_duration(options):
     except Exception:
         raise Exception('Failed to parse duration of input file')
     induration = _parse_time(dur)
+
     # Validate ranges.
     shift = 0
     if options.ss is not None:
@@ -303,6 +310,24 @@ def _get_input_duration(options):
         if endpos <= shift:
             raise Exception(
                 'End position is less or equal than the input seek')
+
+    # Validate fake ranges.
+    if options.tt is not None:
+        outduration = _parse_time(options.tt)
+        if outduration == 0:
+            raise Exception('Duration must not be zero')
+        if shift + outduration > induration:
+            raise Exception('End position too far in the future')
+    elif options.tot is not None:
+        endpos = _parse_time(options.tot)
+        if endpos > induration:
+            raise Exception(
+                'End position {} too far in the future '
+                '(input has only {} duration)'.format(options.tot, dur))
+        if endpos <= shift:
+            raise Exception(
+                'End position is less or equal than the input seek')
+
     return induration
 
 
@@ -341,6 +366,11 @@ def _calc_target_bitrate(options):
         outduration = _parse_time(options.tt)
         if outduration == 0:
             outduration = options.induration
+    elif options.tot is not None:
+        if options.ss is not None:
+            outduration = _parse_time(options.tot) - _parse_time(options.ss)
+        else:
+            outduration = _parse_time(options.tot)
     elif options.t is not None:
         outduration = _parse_time(options.t)
     elif options.ss is not None:
