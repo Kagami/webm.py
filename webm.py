@@ -316,7 +316,7 @@ def _calc_target_bitrate(options):
     else:
         outduration = options.induration
     # mebibytes * 1024 * 8 = kbits
-    return round(options.l * 8192 / outduration - options.ab)
+    return int(round(options.l * 8192 / outduration - options.ab))
 
 
 def _encode(options, firstpass):
