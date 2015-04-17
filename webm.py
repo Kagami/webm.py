@@ -22,7 +22,7 @@ encoding modes:
 examples:
   - fit video to default limit:\t./{title} -i in.mkv
   - fit video to 6 MiB:\t\t./{title} -i in.mkv -l 6
-  - use custom bitrate:\t\t./{title} -i in.mkv -vb 600
+  - set video bitrate to 600k:\t./{title} -i in.mkv -vb 600
   - constrained quality:\t./{title} -i in.mkv -crf 20
   - CQ with custom limit:\t./{title} -i in.mkv -crf 20 -l 6
   - CQ with custom bitrate:\t./{title} -i in.mkv -crf 20 -vb 600
