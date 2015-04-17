@@ -121,6 +121,20 @@ def check_dependencies():
     return {'pythonv': pythonv, 'ffmpegv': ffmpegv}
 
 
+def _is_same_paths(path1, path2):
+    def normalize(path):
+        return os.path.normcase(os.path.abspath(path))
+
+    # Resolve relative paths and cases.
+    if normalize(path1) == normalize(path2):
+        return True
+    # Resolve symlinks and hardlinks.
+    try:
+        return os.stat(path1).st_ino == os.stat(path2).st_ino
+    except Exception:
+        return False
+
+
 def process_options(verinfo):
     import argparse
     class _NoLimit: pass
@@ -144,8 +158,8 @@ def process_options(verinfo):
         'outfile', nargs='?',
         help='output file, e.g. output.webm\n'
             'defaults to infile_hh:mm:ss[.x]-hh:mm:ss[.x].webm if you\n'
-            'specified a starting or ending time, otherwise defaults\n'
-            'to infile.webm')
+            'specified a starting/ending time or duration, otherwise\n'
+            'defaults to infile.webm')
     parser.add_argument(
         '-ss', metavar='position',
         help='seek in input file to the given position\n'
@@ -210,13 +224,15 @@ def process_options(verinfo):
         # <https://bugs.python.org/issue2128> for details.
         args = [arg.decode(sys.stdin.encoding) for arg in args]
     options = parser.parse_args(args)
-    # Don't rewrite the input file.
     if options.outfile is None:
-        if options.infile[:-5] == '.webm':
+        if options.infile[-5:] == '.webm':
+            # Don't overwrite input file.
+            # NOTE: Input file can be in other directory or -ss/-t/-to
+            # is specified so default output name will be different but
+            # for now we don't bother checking this.
             parser.error('Specify output file please')
-    else:
-        if options.infile == options.outfile:
-            parser.error('Specify another output file please')
+    elif _is_same_paths(options.infile, options.outfile):
+        parser.error('Specify another output file please')
     if options.t is not None and options.to is not None:
         parser.error('-t and -to are mutually exclusive')
     if options.tt is not None and options.vb is not None:
