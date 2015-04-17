@@ -16,6 +16,7 @@ Optionally put it somewhere in your `PATH`:
 mkdir -p ~/.local/bin
 wget https://raw.githubusercontent.com/Kagami/webm.py/master/webm.py -O ~/.local/bin/webm
 chmod +x ~/.local/bin/webm
+export PATH=$PATH:~/.local/bin
 webm -h
 ```
 

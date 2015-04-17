@@ -8,6 +8,8 @@ features:
   - uses two-pass encode with the settings recommended by the developers
   - fits output file to the given size limit
   - allows to select video/audio streams and external audio track
+  - can burn subtitles into the video
+  - flexible set of options and ability to pass raw flags to FFmpeg
 
 dependencies:
   - Python 2.7+ or 3.2+ (using: {pythonv})
@@ -225,7 +227,7 @@ def process_options(verinfo):
         help='additional video filters to use')
     parser.add_argument(
         '-aa', metavar='audiofile',
-        help='external audio file to use\n'
+        help='add external audio file to use\n'
              'if specified, its first stream will be muxed into resulting\n'
              'file unless -as is also given')
     parser.add_argument(
@@ -236,7 +238,7 @@ def process_options(verinfo):
         help='additional audio filters to use')
     parser.add_argument(
         '-sa', metavar='subfile', const=True, nargs='?',
-        help='burn subtitlse into the video\n'
+        help='add (burn) subtitles to the video\n'
              'will use subtitles from the given file or from the input video\n'
              'if filename is omitted')
     parser.add_argument(
