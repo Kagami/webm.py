@@ -4,8 +4,8 @@ Just another bikeshed to encode webm VP9 videos. Nothing interesting here.
 
 ## Requirements
 
-* Python 2.7+ or 3.2+
-* FFmpeg 2+ compiled with libvpx and libopus
+* [Python](https://www.python.org/downloads/) 2.7+ or 3.2+
+* [FFmpeg](https://ffmpeg.org/download.html) 2+ compiled with libvpx and libopus
 
 ## Installation
 
