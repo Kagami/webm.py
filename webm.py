@@ -359,7 +359,7 @@ def _calc_target_bitrate(options):
 def _encode(options, firstpass):
     passn = '1' if firstpass else '2'
     logfile = options.logfile[:-6]
-    vb = '{}k'.format(options.vb)
+    vb = '{}k'.format(options.vb) if options.vb else '0'
     ab = '{}k'.format(options.ab)
     threads = _TEXT_TYPE(options.threads)
     speed = '4' if firstpass else '1'
