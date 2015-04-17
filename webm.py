@@ -31,7 +31,6 @@ examples:
 
 # TODO:
 #     * Burn subtitles
-#     * Quality limits
 #     * Best quality mode
 #     * Fit audio to limit
 #     * Option to disable audio
@@ -211,6 +210,12 @@ def process_options(verinfo):
         '-crf', metavar='crf', type=int,
         help='set the quality level (0..63)')
     parser.add_argument(
+        '-qmin', metavar='qmin', type=int,
+        help='set minimum (best) quality level (0..63)')
+    parser.add_argument(
+        '-qmax', metavar='qmax', type=int,
+        help='set maximum (worst) quality level (0..63)')
+    parser.add_argument(
         '-ab', metavar='bitrate', default=64, type=int,
         help='audio bitrate in kbits (default: %(default)s)')
     parser.add_argument(
@@ -261,6 +266,19 @@ def process_options(verinfo):
         options.l = 0
     if options.crf is not None and (options.crf < 0 or options.crf > 63):
         parser.error('quality level must be in 0..63 range')
+    if options.qmin is not None and (options.qmin < 0 or options.qmin > 63):
+        parser.error('quality level must be in 0..63 range')
+    if options.qmax is not None and (options.qmax < 0 or options.qmax > 63):
+        parser.error('quality level must be in 0..63 range')
+    if options.qmin is not None and options.qmax is not None:
+        if options.qmin > options.qmax:
+            parser.error('minimum quality level greater than maximum level')
+    if (options.crf is not None and
+            (options.qmin is not None or options.qmax is not None)):
+        qmin = 0 if options.qmin is None else options.qmin
+        qmax = 63 if options.qmax is None else options.qmax
+        if not qmin <= options.crf <= qmax:
+            parser.error('qmin <= crf <= qmax relation violated')
     return options
 
 
@@ -438,6 +456,10 @@ def _encode(options, firstpass):
     ]
     if options.crf is not None:
         args += ['-crf', _TEXT_TYPE(options.crf)]
+    if options.qmin is not None:
+        args += ['-qmin', _TEXT_TYPE(options.qmin)]
+    if options.qmax is not None:
+        args += ['-qmax', _TEXT_TYPE(options.qmax)]
 
     # Filters.
     if options.ow is not None or options.oh is not None:
