@@ -431,7 +431,12 @@ def _encode(options, firstpass):
     if options.t is not None:
         args += ['-t', options.t]
     elif options.to is not None:
-        args += ['-to', options.to]
+        # Convert -to to -t because -ss resets the timestamps.
+        if options.ss is None:
+            outduration = options.to
+        else:
+            outduration = _parse_time(options.to) - _parse_time(options.ss)
+        args += ['-t', _TEXT_TYPE(outduration)]
 
     # Streams.
     if (options.vs is not None
