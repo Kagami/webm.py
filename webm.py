@@ -216,21 +216,20 @@ def process_options(verinfo):
 def _parse_time(time):
     if isinstance(time, _NUM_TYPES):
         return time
-    # hh:mm:ss[.xxx] -> (hh:(mm)):(ss.xxx)
-    m = re.match(r'(?:(\d+):(?:(\d+)+:)?)?(\d+(?:\.\d+)?)$', time)
+    # [hh]:[mm]:[ss[.xxx]]
+    m = re.match(r'(?:(\d+):)?(?:(\d+)+:)?(\d+(?:\.\d+)?)$', time)
     if not m:
         raise Exception('Invalid time {}'.format(time))
     hours, minutes, seconds = m.groups()
     duration = float(seconds)
-    if minutes:
-        minutes = int(minutes)
-        duration += minutes * 60
-    if hours:
-        hours = int(hours)
-        if minutes:
-            duration += hours * 3600
+    if hours is not None:
+        if minutes is None:
+            # 1:2 -> (1, None, 2)
+            duration += int(hours) * 60
         else:
-            duration += hours * 60
+            # 1:2:3 -> (1, 2, 3)
+            duration += int(minutes) * 60
+            duration += int(hours) * 3600
     return duration
 
 
