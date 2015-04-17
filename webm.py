@@ -12,16 +12,32 @@ features:
 dependencies:
   - Python 2.7+ or 3.2+ (using: {pythonv})
   - FFmpeg 2+ compiled with libvpx and libopus (using: {ffmpegv})
+
+encoding modes:
+  - by default bitrate calculated to fit the output video to limit
+  - you may specify custom bitrate to use
+  - -crf option enables constrained quality mode
+  - -crf and -vb 0 enable constant quality mode
+
+examples:
+  - fit video to default limit:\t./{title} -i in.mkv
+  - fit video to 6 MiB:\t\t./{title} -i in.mkv -l 6
+  - use custom bitrate:\t\t./{title} -i in.mkv -vb 600k
+  - constrained quality:\t./{title} -i in.mkv -crf 20
+  - CQ with custom limit:\t./{title} -i in.mkv -crf 20 -l 6
+  - CQ with custom bitrate:\t./{title} -i in.mkv -crf 20 -vb 600k
+  - constant quality:\t\t./{title} -i in.mkv -crf 20 -vb 0
 """
 
 # TODO:
-#     * CRF/CQ/BQ modes
 #     * Burn subtitles
 #     * Limit quality
+#     * Best quality mode
 #     * Fit audio to limit
 #     * Option to disable audio
 #     * Option to strip metadata
 #     * Interactive seeking/cropping with mpv
+#     * Optionally use mkvmerge for muxing
 
 from __future__ import absolute_import
 from __future__ import division
@@ -108,8 +124,8 @@ def check_dependencies():
 def process_options(verinfo):
     import argparse
     class _NoLimit: pass
+    doc = __doc__.format(title=__title__, **verinfo)
 
-    doc = __doc__.format(**verinfo)
     parser = argparse.ArgumentParser(
         prog=__title__,
         description=doc,
@@ -170,6 +186,9 @@ def process_options(verinfo):
         '-vb', metavar='bitrate', type=int,
         help='video bitrate in kbits')
     parser.add_argument(
+        '-crf', metavar='crf', type=int,
+        help='set the quality level (0..63)')
+    parser.add_argument(
         '-ab', metavar='bitrate', default=64, type=int,
         help='audio bitrate in kbits (default: %(default)s)')
     parser.add_argument(
@@ -183,6 +202,7 @@ def process_options(verinfo):
         help='external audio file to use\n'
              'if specified, its first stream will be muxed into resulting\n'
              'file unless -as is also given')
+
     args = sys.argv[1:]
     if _PY2:
         # Convert command line arguments to unicode.
@@ -210,6 +230,8 @@ def process_options(verinfo):
         parser.error('-l and -vb are mutually exclusive')
     else:
         options.l = 0
+    if options.crf is not None and (options.crf < 0 or options.crf > 63):
+        parser.error('quality level must be in 0..63 range')
     return options
 
 
@@ -360,6 +382,8 @@ def _encode(options, firstpass):
         '-tile-columns', '6', '-frame-parallel', '1',
         '-auto-alt-ref', '1', '-lag-in-frames', '25',
     ]
+    if options.crf is not None:
+        args += ['-crf', _TEXT_TYPE(options.crf)]
 
     # Filters.
     if options.ow is not None or options.oh is not None:
