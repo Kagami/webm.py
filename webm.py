@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-convert videos to webm format using ffmpeg
+convert videos to webm format using FFmpeg
 
 features:
   - encodes input video to webm container with VP9 and Opus
@@ -246,7 +246,7 @@ def process_options(verinfo):
         help='subtitles stream (index) to use (default: best/suitable)')
     parser.add_argument(
         '-oo', metavar='ffmpegopts',
-        help='additional raw ffmpeg options')
+        help='additional raw FFmpeg options')
 
     args = sys.argv[1:]
     if _PY2:
@@ -495,7 +495,7 @@ def _encode(options, firstpass):
             vfilters += ['setpts=PTS+{}/TB'.format(_parse_time(options.ss))]
         subtitles = 'subtitles='
         subfile = options.infile if options.sa is True else options.sa
-        # This escaping should be sufficient for ffmpeg filter argument
+        # This escaping should be sufficient for FFmpeg filter argument
         # (see ffmpeg-filters(1), "Quotes and escaping").
         subfile = subfile.replace("'", "\\'")
         subtitles += "'{}'".format(subfile)
