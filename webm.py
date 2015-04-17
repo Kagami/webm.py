@@ -30,14 +30,13 @@ examples:
 """
 
 # TODO:
-#     * Burn subtitles
-#     * Best quality mode
-#     * Fit audio to limit
-#     * Option to disable audio
 #     * Option to strip metadata
-#     * Interactive seeking/cropping with mpv
-#     * Optionally use mkvmerge for muxing
+#     * Option to disable audio
 #     * Accept image/gif as video source
+#     * Fit audio to limit
+#     * Optionally use mkvmerge for muxing
+#     * Interactive seeking/cropping with mpv
+#     * Best quality mode
 
 # Since there is no way to wrap future imports in try/except, we use
 # hack with comment. See <http://stackoverflow.com/q/388069> for
@@ -222,13 +221,21 @@ def process_options(verinfo):
         '-vs', metavar='videostream', type=int,
         help='video stream number to use (default: best/suitable)')
     parser.add_argument(
-        '-as', metavar='audiostream', type=int,
-        help='audio stream number to use (default: best/suitable)')
-    parser.add_argument(
         '-af', metavar='audiofile',
         help='external audio file to use\n'
              'if specified, its first stream will be muxed into resulting\n'
              'file unless -as is also given')
+    parser.add_argument(
+        '-as', metavar='audiostream', type=int,
+        help='audio stream number to use (default: best/suitable)')
+    parser.add_argument(
+        '-sf', metavar='subfile', const=True, nargs='?',
+        help='burn subtitlse into the video\n'
+             'will use subtitles from the given file or from the input video\n'
+             'if filename is omitted')
+    parser.add_argument(
+        '-si', metavar='substream', type=int,
+        help='subtitles stream to use (default: best/suitable)')
     parser.add_argument(
         '-oo', metavar='ffmpegopts',
         help='additional ffmpeg options')
@@ -467,12 +474,30 @@ def _encode(options, firstpass):
         args += ['-qmax', _TEXT_TYPE(options.qmax)]
 
     # Filters.
+    filters = []
     if options.ow is not None or options.oh is not None:
         scale='scale='
         scale += '-1' if options.ow is None else _TEXT_TYPE(options.ow)
         scale += ':'
         scale += '-1' if options.oh is None else _TEXT_TYPE(options.oh)
-        args += ['-vf', scale, '-sws_flags', options.sws]
+        filters += [scale]
+        args += ['-sws_flags', options.sws]
+    if options.sf is not None:
+        if options.ss is not None:
+            filters += ['setpts=PTS+{}/TB'.format(_parse_time(options.ss))]
+        subtitles = 'subtitles='
+        subfile = options.infile if options.sf is True else options.sf
+        # This escaping should be sufficient for ffmpeg filter argument
+        # (see ffmpeg-filters(1), "Quotes and escaping").
+        subfile = subfile.replace("'", "\\'")
+        subtitles += "'{}'".format(subfile)
+        if options.si is not None:
+            subtitles += ':si={}'.format(options.si)
+        filters += [subtitles]
+        if options.ss is not None:
+            filters += ['setpts=PTS-STARTPTS']
+    if filters:
+        args += ['-vf', ','.join(filters)]
 
     # Audio.
     if firstpass:
