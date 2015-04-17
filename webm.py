@@ -221,7 +221,10 @@ def process_options(verinfo):
         '-vs', metavar='videostream', type=int,
         help='video stream number to use (default: best/suitable)')
     parser.add_argument(
-        '-af', metavar='audiofile',
+        '-vf', metavar='videofilters',
+        help='additional video filters to use')
+    parser.add_argument(
+        '-aa', metavar='audiofile',
         help='external audio file to use\n'
              'if specified, its first stream will be muxed into resulting\n'
              'file unless -as is also given')
@@ -229,16 +232,19 @@ def process_options(verinfo):
         '-as', metavar='audiostream', type=int,
         help='audio stream number to use (default: best/suitable)')
     parser.add_argument(
-        '-sf', metavar='subfile', const=True, nargs='?',
+        '-af', metavar='audiofilters',
+        help='additional audio filters to use')
+    parser.add_argument(
+        '-sa', metavar='subfile', const=True, nargs='?',
         help='burn subtitlse into the video\n'
              'will use subtitles from the given file or from the input video\n'
              'if filename is omitted')
     parser.add_argument(
         '-si', metavar='substream', type=int,
-        help='subtitles stream to use (default: best/suitable)')
+        help='subtitles stream (index) to use (default: best/suitable)')
     parser.add_argument(
         '-oo', metavar='ffmpegopts',
-        help='additional ffmpeg options')
+        help='additional raw ffmpeg options')
 
     args = sys.argv[1:]
     if _PY2:
@@ -433,8 +439,8 @@ def _encode(options, firstpass):
     if options.ss is not None:
         args += ['-ss', options.ss]
     args += ['-i', options.infile]
-    if options.af is not None:
-        args += ['-i', options.af]
+    if options.aa is not None:
+        args += ['-i', options.aa]
     if options.t is not None:
         args += ['-t', options.t]
     elif options.to is not None:
@@ -448,13 +454,13 @@ def _encode(options, firstpass):
     # Streams.
     if (options.vs is not None
             or getattr(options, 'as') is not None
-            or options.af is not None):
+            or options.aa is not None):
         vstream = 0 if options.vs is None else options.vs
         args += ['-map', '0:{}'.format(vstream)]
-        ainput = 0 if options.af is None else 1
+        ainput = 0 if options.aa is None else 1
         astream = getattr(options, 'as')
         if astream is None:
-            astream = 1 if options.af is None else 0
+            astream = 1 if options.aa is None else 0
         args += ['-map', '{}:{}'.format(ainput, astream)]
 
     # Video.
@@ -473,37 +479,41 @@ def _encode(options, firstpass):
     if options.qmax is not None:
         args += ['-qmax', _TEXT_TYPE(options.qmax)]
 
-    # Filters.
-    filters = []
+    # Video filters.
+    vfilters = []
     if options.ow is not None or options.oh is not None:
         scale='scale='
         scale += '-1' if options.ow is None else _TEXT_TYPE(options.ow)
         scale += ':'
         scale += '-1' if options.oh is None else _TEXT_TYPE(options.oh)
-        filters += [scale]
+        vfilters += [scale]
         args += ['-sws_flags', options.sws]
-    if options.sf is not None:
+    if options.sa is not None:
         if options.ss is not None:
-            filters += ['setpts=PTS+{}/TB'.format(_parse_time(options.ss))]
+            vfilters += ['setpts=PTS+{}/TB'.format(_parse_time(options.ss))]
         subtitles = 'subtitles='
-        subfile = options.infile if options.sf is True else options.sf
+        subfile = options.infile if options.sa is True else options.sa
         # This escaping should be sufficient for ffmpeg filter argument
         # (see ffmpeg-filters(1), "Quotes and escaping").
         subfile = subfile.replace("'", "\\'")
         subtitles += "'{}'".format(subfile)
         if options.si is not None:
             subtitles += ':si={}'.format(options.si)
-        filters += [subtitles]
+        vfilters += [subtitles]
         if options.ss is not None:
-            filters += ['setpts=PTS-STARTPTS']
-    if filters:
-        args += ['-vf', ','.join(filters)]
+            vfilters += ['setpts=PTS-STARTPTS']
+    if options.vf is not None:
+        vfilters += [options.vf]
+    if vfilters:
+        args += ['-vf', ','.join(vfilters)]
 
     # Audio.
     if firstpass:
         args += ['-an']
     else:
         args += ['-c:a', 'libopus', '-b:a', ab, '-ac', '2']
+        if options.af is not None:
+            args += ['-af', options.af]
 
     # Misc.
     if options.oo is not None:
