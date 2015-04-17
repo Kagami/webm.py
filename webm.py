@@ -224,6 +224,9 @@ def process_options(verinfo):
         help='external audio file to use\n'
              'if specified, its first stream will be muxed into resulting\n'
              'file unless -as is also given')
+    parser.add_argument(
+        '-oo', metavar='ffmpegopts',
+        help='additional ffmpeg options')
 
     args = sys.argv[1:]
     if _PY2:
@@ -449,6 +452,10 @@ def _encode(options, firstpass):
         args += ['-an']
     else:
         args += ['-c:a', 'libopus', '-b:a', ab, '-ac', '2']
+
+    # Misc.
+    if options.oo is not None:
+        args += options.oo.split()
 
     # Output.
     args += ['-f', 'webm', '-y', outfile]
