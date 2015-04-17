@@ -9,7 +9,7 @@ Just another bikeshed to encode webm VP9 videos. Nothing interesting here.
 
 ## Installation
 
-Just download <https://raw.githubusercontent.com/Kagami/webm.py/master/webm.py>.
+Just save <https://raw.githubusercontent.com/Kagami/webm.py/master/webm.py>.
 
 Optionally put it somewhere in your `PATH`:
 ```bash
@@ -20,33 +20,33 @@ chmod +x ~/.local/bin/webm
 
 ## Usage
 
-**NOTE:** Windows users may want to add python executable to the `PATH`. See <https://docs.python.org/3/using/windows.html#excursus-setting-environment-variables> for details. Otherwise just type the full path to `python.exe` location.
+**NOTE:** Windows users may want to add Python executable to the `PATH`. See <https://docs.python.org/3/using/windows.html#excursus-setting-environment-variables> for details. Otherwise just type the full path to `python.exe` location instead of `python`.
 
 Show help:
 ```bash
-$ python webm.py -h
+python webm.py -h
 ```
 
-Usage examples
+Usage examples:
 ```bash
-# Fit video to default limit:
-% python {title} -i in.mkv
+# Fit video to default limit
+python {title} -i in.mkv
 
-# Fit video to 6 MiB:
-% python {title} -i in.mkv -l 6
+# Fit video to 6 MiB
+python {title} -i in.mkv -l 6
 
-# Set video bitrate to 600k:
-% python {title} -i in.mkv -vb 600
+# Set video bitrate to 600k
+python {title} -i in.mkv -vb 600
 
-# Constrained quality:
-% python {title} -i in.mkv -crf 20
+# Constrained quality
+python {title} -i in.mkv -crf 20
 
-# CQ with custom limit:
-% python {title} -i in.mkv -crf 20 -l 6
+# CQ with custom limit
+python {title} -i in.mkv -crf 20 -l 6
 
-# CQ with custom bitrate:
-% python {title} -i in.mkv -crf 20 -vb 600
+# CQ with custom bitrate
+python {title} -i in.mkv -crf 20 -vb 600
 
-# Constant quality:
-% python {title} -i in.mkv -crf 20 -vb 0
+# Constant quality
+python {title} -i in.mkv -crf 20 -vb 0
 ```
