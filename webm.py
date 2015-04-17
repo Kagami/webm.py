@@ -40,10 +40,13 @@ examples:
 #     * Optionally use mkvmerge for muxing
 #     * Accept image/gif as video source
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+# Since there is no way to wrap future imports in try/except, we use
+# hack with comment. See <http://stackoverflow.com/q/388069> for
+# details.
+from __future__ import absolute_import  # Install Python 2.7+ or 3.2+
+from __future__ import division  # Install Python 2.7+ or 3.2+
+from __future__ import print_function  # Install Python 2.7+ or 3.2+
+from __future__ import unicode_literals  # Install Python 2.7+ or 3.2+
 
 import os
 import re
