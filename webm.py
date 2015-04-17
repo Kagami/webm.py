@@ -22,10 +22,10 @@ encoding modes:
 examples:
   - fit video to default limit:\t./{title} -i in.mkv
   - fit video to 6 MiB:\t\t./{title} -i in.mkv -l 6
-  - use custom bitrate:\t\t./{title} -i in.mkv -vb 600k
+  - use custom bitrate:\t\t./{title} -i in.mkv -vb 600
   - constrained quality:\t./{title} -i in.mkv -crf 20
   - CQ with custom limit:\t./{title} -i in.mkv -crf 20 -l 6
-  - CQ with custom bitrate:\t./{title} -i in.mkv -crf 20 -vb 600k
+  - CQ with custom bitrate:\t./{title} -i in.mkv -crf 20 -vb 600
   - constant quality:\t\t./{title} -i in.mkv -crf 20 -vb 0
 """
 
@@ -157,7 +157,7 @@ def process_options(verinfo):
         help='input file, e.g. infile.mkv (required)')
     parser.add_argument(
         'outfile', nargs='?',
-        help='output file, e.g. output.webm\n'
+        help='output file, e.g. outfile.webm\n'
             'defaults to infile_hh:mm:ss[.x]-hh:mm:ss[.x].webm if you\n'
             'specified a starting/ending time or duration, otherwise\n'
             'defaults to infile.webm')
