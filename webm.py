@@ -20,13 +20,13 @@ encoding modes:
   - -crf and -vb 0 enable constant quality mode
 
 examples:
-  - fit video to default limit:\t./{title} -i in.mkv
-  - fit video to 6 MiB:\t\t./{title} -i in.mkv -l 6
-  - set video bitrate to 600k:\t./{title} -i in.mkv -vb 600
-  - constrained quality:\t./{title} -i in.mkv -crf 20
-  - CQ with custom limit:\t./{title} -i in.mkv -crf 20 -l 6
-  - CQ with custom bitrate:\t./{title} -i in.mkv -crf 20 -vb 600
-  - constant quality:\t\t./{title} -i in.mkv -crf 20 -vb 0
+  - fit video to default limit:\tpython {title} -i in.mkv
+  - fit video to 6 MiB:\t\tpython {title} -i in.mkv -l 6
+  - set video bitrate to 600k:\tpython {title} -i in.mkv -vb 600
+  - constrained quality:\tpython {title} -i in.mkv -crf 20
+  - CQ with custom limit:\tpython {title} -i in.mkv -crf 20 -l 6
+  - CQ with custom bitrate:\tpython {title} -i in.mkv -crf 20 -vb 600
+  - constant quality:\t\tpython {title} -i in.mkv -crf 20 -vb 0
 """
 
 # TODO:
