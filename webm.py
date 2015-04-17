@@ -327,8 +327,8 @@ def _get_output_filename(options):
         name += '-'
         if options.t:
             endtime = shift + _parse_time(options.t)
-        elif options.tt:
-            endtime = _parse_time(options.tt)
+        elif options.to:
+            endtime = _parse_time(options.to)
         else:
             endtime = options.induration
         name += _get_timestamp(endtime)
