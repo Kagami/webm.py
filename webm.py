@@ -562,7 +562,8 @@ def print_stats(options, start):
     print('Output file: {}'.format(options.outfile), file=sys.stderr)
     print('Output duration: {}'.format(_timestamp(options.outduration)),
           file=sys.stderr)
-    print('Output bitrate: {}k'.format(options.vb), file=sys.stderr)
+    print('Output video bitrate: {}k'.format(options.vb), file=sys.stderr)
+    print('Output audio bitrate: {}k'.format(options.ab), file=sys.stderr)
     size = os.path.getsize(options.outfile)
     sizeinfo = 'Output file size: {} B'.format(size)
     if size >= 1024:
