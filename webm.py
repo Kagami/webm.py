@@ -412,9 +412,9 @@ def _round(x, d=0):
 def _timestamp(duration):
     idur = int(duration)
     ts = '{:02d}:{:02d}:{:02d}'.format(idur//3600, idur%3600//60, idur%60)
-    frac = _round(duration % 1, 1)
+    frac = duration % 1
     if frac >= 0.1:
-        ts += _TEXT_TYPE(frac)[1:]
+        ts += _TEXT_TYPE(frac)[1:3]
     return ts
 
 
