@@ -243,11 +243,15 @@ def process_options(verinfo):
              'will use subtitles from the given file or from the input video\n'
              'if filename is omitted')
     parser.add_argument(
-        '-si', metavar='substream', type=int,
-        help='subtitles stream (index) to use (default: best/suitable)')
+        '-si', metavar='subindex', type=int,
+        help='subtitles stream index to use (default: best/suitable)\n'
+             "note that it's not the same as stream number but index of\n"
+             'subtitle stream across other subtitles you want to use;\n'
+             'see ffmpeg-filters(1) for more details')
     parser.add_argument(
         '-oo', metavar='ffmpegopts',
-        help='additional raw FFmpeg options')
+        help='additional raw FFmpeg options\n'
+             "example: -oo='-aspect 16:9' (equal sign is mandatory)")
 
     args = sys.argv[1:]
     if _PY2:
