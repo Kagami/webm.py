@@ -218,7 +218,7 @@ def process_options(verinfo):
         help='audio bitrate in kbits (default: %(default)s)')
     parser.add_argument(
         '-vs', metavar='videostream', type=int,
-        help='video stream number to use (default: best/suitable)')
+        help='video stream number to use (default: best)')
     parser.add_argument(
         '-vf', metavar='videofilters',
         help='additional video filters to use')
@@ -227,7 +227,7 @@ def process_options(verinfo):
         help='insert video filters at the start of filter chain')
     parser.add_argument(
         '-aa', metavar='audiofile',
-        help='add external audio file to use\n'
+        help='add (use) external audio file\n'
              'if specified, its first stream will be muxed into resulting\n'
              'file unless -as is also given')
     parser.add_argument(
@@ -243,10 +243,10 @@ def process_options(verinfo):
              'if filename is omitted')
     parser.add_argument(
         '-si', metavar='subindex', type=int,
-        help='subtitles stream index to use (default: best/suitable)\n'
-             "note that it's not the same as stream number but index of\n"
-             'subtitle stream across other subtitles you want to use;\n'
-             'see ffmpeg-filters(1) for more details')
+        help='subtitle index to use (default: first/suitable)\n'
+             "note: it's not the global stream number, but the index of\n"
+             'subtitle stream across other subtitles; see ffmpeg-filters(1)\n'
+             'for details')
     parser.add_argument(
         '-nm', action='store_true',
         help='strip metadata from the output file')
