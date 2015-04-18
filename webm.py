@@ -202,7 +202,7 @@ def process_options(verinfo):
         '-sws', metavar='algo', default='lanczos',
         help='scaling algorithm (default: %(default)s)')
     parser.add_argument(
-        '-l', metavar='size', default=_NoLimit, type=int,
+        '-l', metavar='size', default=_NoLimit, type=float,
         help='filesize limit in mebibytes (default: 8)\n'
              '-l and -vb are mutually exclusive')
     parser.add_argument(
@@ -281,7 +281,7 @@ def process_options(verinfo):
     if options.vb is None:
         if options.l is _NoLimit:
             options.l = 8
-        elif options.l < 1:
+        elif options.l <= 0:
             parser.error('Bad limit value')
     else:
         if options.l is not _NoLimit:
@@ -554,7 +554,7 @@ def print_stats(options, start):
     if size > 1024 * 1024:
         sizeinfo += ', {:.2f} MiB'.format(size/1024/1024)
     if options.l is not None:
-        limit = options.l * 1024 * 1024
+        limit = int(round(options.l * 1024 * 1024))
         if size > limit:
             sizeinfo += ', overweight: {} B'.format(size - limit)
         else:
