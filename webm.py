@@ -512,7 +512,8 @@ def _encode(options, firstpass):
         subtitles = 'subtitles='
         subfile = options.infile if options.sa is True else options.sa
         # This escaping should be sufficient for FFmpeg filter argument
-        # (see ffmpeg-filters(1), "Quotes and escaping").
+        # (see ffmpeg-utils(1), "Quotes and escaping").
+        subfile = subfile.replace('\\', '\\\\')
         subfile = subfile.replace("'", "\\'")
         subtitles += "'{}'".format(subfile)
         if options.si is not None:
