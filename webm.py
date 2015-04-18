@@ -52,6 +52,7 @@ from __future__ import unicode_literals  # Install Python 2.7+ or 3.2+
 import os
 import re
 import sys
+import math
 import time
 import tempfile
 import traceback
@@ -394,10 +395,20 @@ def _get_durations(options):
     }
 
 
+def _round(x, d=0):
+    """
+    round function from Python2. See
+    <http://python3porting.com/differences.html#rounding-behavior> for
+    details.
+    """
+    p = 10 ** d
+    return float(math.floor((x * p) + math.copysign(0.5, x)))/p
+
+
 def _timestamp(duration):
     idur = int(duration)
     ts = '{:02d}:{:02d}:{:02d}'.format(idur//3600, idur%3600//60, idur%60)
-    frac = round(duration % 1, 1)
+    frac = _round(duration % 1, 1)
     if frac >= 0.1:
         ts += _TEXT_TYPE(frac)[1:]
     return ts
@@ -430,7 +441,7 @@ def _calc_video_bitrate(options):
     else:
         outduration = options.outduration
     # mebibytes * 1024 * 8 = kbits
-    return int(round(options.l * 8192 / outduration - options.ab))
+    return int(_round(options.l * 8192 / outduration - options.ab))
 
 
 def _encode(options, firstpass):
@@ -554,7 +565,7 @@ def print_stats(options, start):
     if size >= 1024 * 1024:
         sizeinfo += ', {:.2f} MiB'.format(size/1024/1024)
     if options.l is not None:
-        limit = int(round(options.l * 1024 * 1024))
+        limit = int(_round(options.l * 1024 * 1024))
         if size > limit:
             sizeinfo += ', OVERWEIGHT: {} B'.format(size - limit)
         elif size < limit:
