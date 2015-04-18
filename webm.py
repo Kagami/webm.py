@@ -226,6 +226,9 @@ def process_options(verinfo):
         '-vf', metavar='videofilters',
         help='additional video filters to use')
     parser.add_argument(
+        '-vfi', metavar='videofilters',
+        help='insert video filters at the start of filter chain')
+    parser.add_argument(
         '-aa', metavar='audiofile',
         help='add external audio file to use\n'
              'if specified, its first stream will be muxed into resulting\n'
@@ -235,7 +238,7 @@ def process_options(verinfo):
         help='audio stream number to use (default: best/suitable)')
     parser.add_argument(
         '-af', metavar='audiofilters',
-        help='additional audio filters to use')
+        help='audio filters to use')
     parser.add_argument(
         '-sa', metavar='subfile', const=True, nargs='?',
         help='add (burn) subtitles to the video\n'
@@ -483,6 +486,8 @@ def _encode(options, firstpass):
 
     # Video filters.
     vfilters = []
+    if options.vfi is not None:
+        vfilters += [options.vfi]
     if options.ow is not None or options.oh is not None:
         scale='scale='
         scale += '-1' if options.ow is None else _TEXT_TYPE(options.ow)
