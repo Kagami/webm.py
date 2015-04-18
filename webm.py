@@ -38,6 +38,7 @@ examples:
 #     * Fit audio to limit
 #     * Optionally use mkvmerge for muxing
 #     * Interactive seeking/cropping with mpv
+#     * Shift audio/subtitles by given amount of time
 #     * Best quality mode
 
 # Since there is no way to wrap future imports in try/except, we use
@@ -258,6 +259,10 @@ def process_options(verinfo):
         # <https://bugs.python.org/issue2128> for details.
         args = [arg.decode(sys.stdin.encoding) for arg in args]
     options = parser.parse_args(args)
+    # Additional input options validation.
+    # NOTE: We ensure only minimal checkings here to not restrict the
+    # possible weird uses. E.g. ow, oh, vs, as, si can be zero or
+    # negative.
     if options.outfile is None:
         if options.infile[-5:] == '.webm':
             # Don't overwrite input file.
@@ -276,12 +281,14 @@ def process_options(verinfo):
     if options.vb is None:
         if options.l is _NoLimit:
             options.l = 8
-        elif not options.l:
+        elif options.l < 1:
             parser.error('Bad limit value')
-    elif options.l is not _NoLimit:
-        parser.error('-l and -vb are mutually exclusive')
     else:
-        options.l = 0
+        if options.l is not _NoLimit:
+            parser.error('-l and -vb are mutually exclusive')
+        if options.vb < 0:
+            parser.error('invalid video bitrate')
+        options.l = None
     if options.crf is not None and (options.crf < 0 or options.crf > 63):
         parser.error('quality level must be in 0..63 range')
     if options.qmin is not None and (options.qmin < 0 or options.qmin > 63):
@@ -297,6 +304,8 @@ def process_options(verinfo):
         qmax = 63 if options.qmax is None else options.qmax
         if not qmin <= options.crf <= qmax:
             parser.error('qmin <= crf <= qmax relation violated')
+    if options.ab < 1:
+        parser.error('invalid audio bitrate')
     return options
 
 
@@ -320,7 +329,7 @@ def _parse_time(time):
     return duration
 
 
-def _get_input_duration(options):
+def _get_durations(options):
     out = _ffmpeg_output(
         ['-hide_banner', '-i', options.infile],
         check_code=False)['stderr']
@@ -347,6 +356,7 @@ def _get_input_duration(options):
             raise Exception('End position too far in the future')
     elif options.to is not None:
         endpos = _parse_time(options.to)
+        outduration = endpos - shift
         if endpos > induration:
             raise Exception(
                 'End position {} too far in the future '
@@ -354,25 +364,34 @@ def _get_input_duration(options):
         if endpos <= shift:
             raise Exception(
                 'End position is less or equal than the input seek')
+    else:
+        outduration = induration
 
     # Validate fake ranges.
     if options.tt is not None:
-        outduration = _parse_time(options.tt)
-        if outduration == 0:
-            raise Exception('Duration must not be zero')
-        if shift + outduration > induration:
+        foutduration = _parse_time(options.tt)
+        if foutduration == 0:
+            foutduration = induration
+        elif foutduration > induration:
             raise Exception('End position too far in the future')
     elif options.tot is not None:
-        endpos = _parse_time(options.tot)
-        if endpos > induration:
+        fendpos = _parse_time(options.tot)
+        foutduration = fendpos - shift
+        if fendpos > induration:
             raise Exception(
                 'End position {} too far in the future '
                 '(input has only {} duration)'.format(options.tot, dur))
-        if endpos <= shift:
+        if fendpos <= shift:
             raise Exception(
                 'End position is less or equal than the input seek')
+    else:
+        foutduration = outduration
 
-    return induration
+    return {
+        'induration': induration,
+        'outduration': outduration,
+        'foutduration': foutduration,
+    }
 
 
 def _get_timestamp(duration):
@@ -395,37 +414,21 @@ def _get_output_filename(options):
         name += _get_timestamp(shift)
         name += '-'
         if options.t:
-            endtime = shift + _parse_time(options.t)
+            endpos = shift + _parse_time(options.t)
         elif options.to:
-            endtime = _parse_time(options.to)
+            endpos = _parse_time(options.to)
         else:
-            endtime = options.induration
-        name += _get_timestamp(endtime)
+            endpos = options.induration
+        name += _get_timestamp(endpos)
     name += '.webm'
     return name
 
 
 def _calc_target_bitrate(options):
-    if options.tt is not None:
-        outduration = _parse_time(options.tt)
-        if outduration == 0:
-            outduration = options.induration
-    elif options.tot is not None:
-        if options.ss is not None:
-            outduration = _parse_time(options.tot) - _parse_time(options.ss)
-        else:
-            outduration = _parse_time(options.tot)
-    elif options.t is not None:
-        outduration = _parse_time(options.t)
-    elif options.ss is not None:
-        if options.to is not None:
-            outduration = _parse_time(options.to) - _parse_time(options.ss)
-        else:
-            outduration = options.induration - _parse_time(options.ss)
-    elif options.to is not None:
-        outduration = _parse_time(options.to)
+    if options.tt is not None or options.tot is not None:
+        outduration = options.foutduration
     else:
-        outduration = options.induration
+        outduration = options.outduration
     # mebibytes * 1024 * 8 = kbits
     return int(round(options.l * 8192 / outduration - options.ab))
 
@@ -446,15 +449,8 @@ def _encode(options, firstpass):
     args += ['-i', options.infile]
     if options.aa is not None:
         args += ['-i', options.aa]
-    if options.t is not None:
-        args += ['-t', options.t]
-    elif options.to is not None:
-        # Convert -to to -t because -ss resets the timestamps.
-        if options.ss is None:
-            outduration = options.to
-        else:
-            outduration = _parse_time(options.to) - _parse_time(options.ss)
-        args += ['-t', _TEXT_TYPE(outduration)]
+    if options.t is not None or options.to is not None:
+        args += ['-t', _TEXT_TYPE(options.outduration)]
 
     # Streams.
     if (options.vs is not None
@@ -534,7 +530,7 @@ def _encode(options, firstpass):
 
 def encode(options):
     import multiprocessing
-    options.induration = _get_input_duration(options)
+    options.__dict__.update(_get_durations(options))
     if options.outfile is None:
         options.outfile = _get_output_filename(options)
     if options.vb is None:
@@ -548,6 +544,8 @@ def encode(options):
 def print_stats(options, start):
     print('='*50, file=sys.stderr)
     print('Output file: {}'.format(options.outfile), file=sys.stderr)
+    print('Output duration: {}'.format(_get_timestamp(options.outduration)),
+          file=sys.stderr)
     print('Output bitrate: {}k'.format(options.vb), file=sys.stderr)
     size = os.path.getsize(options.outfile)
     sizeinfo = 'Output file size: {} B'.format(size)
@@ -555,19 +553,16 @@ def print_stats(options, start):
         sizeinfo += ', {:.2f} KiB'.format(size/1024)
     if size > 1024 * 1024:
         sizeinfo += ', {:.2f} MiB'.format(size/1024/1024)
-    if options.l:
+    if options.l is not None:
         limit = options.l * 1024 * 1024
         if size > limit:
             sizeinfo += ', overweight: {} B'.format(size - limit)
         else:
             sizeinfo += ', underweight: {} B'.format(limit - size)
     print(sizeinfo, file=sys.stderr)
-    runtime = int(round(time.time() - start))
-    if runtime > 60:
-        runtime = '{}m{}s'.format(runtime//60, runtime%60)
-    else:
-        runtime = '{}s'.format(runtime)
-    print('Overall time spent: {}'.format(runtime), file=sys.stderr)
+    runtime = time.time() - start
+    print('Overall time spent: {}'.format(_get_timestamp(runtime)),
+          file=sys.stderr)
 
 
 def cleanup(options):
