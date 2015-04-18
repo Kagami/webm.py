@@ -32,7 +32,6 @@ examples:
 """
 
 # TODO:
-#     * Option to strip metadata
 #     * Option to disable audio
 #     * Accept image/gif as video source
 #     * Fit audio to limit
@@ -248,6 +247,9 @@ def process_options(verinfo):
              "note that it's not the same as stream number but index of\n"
              'subtitle stream across other subtitles you want to use;\n'
              'see ffmpeg-filters(1) for more details')
+    parser.add_argument(
+        '-nm', action='store_true',
+        help='strip metadata from the output file')
     parser.add_argument(
         '-oo', metavar='ffmpegopts',
         help='additional raw FFmpeg options\n'
@@ -478,6 +480,8 @@ def _encode(options, firstpass):
         if astream is None:
             astream = 1 if options.aa is None else 0
         args += ['-map', '{}:{}'.format(ainput, astream)]
+    if options.nm:
+        args += ['-map_metadata', '-1']
 
     # Video.
     args += [
