@@ -68,10 +68,6 @@ _TEXT_TYPE = unicode if _PY2 else str
 _NUM_TYPES = (int, long, float) if _PY2 else (int, float)
 
 
-def _is_verbose(options):
-    return getattr(options, 'verbose', False)
-
-
 def _ffmpeg(args, check_code=True, debug=False):
     args = ['ffmpeg'] + args
     if debug:
@@ -180,13 +176,13 @@ def process_options(verinfo):
         help='stop writing the output at position\n'
              'position may be either in seconds or in "hh:mm:ss[.xxx]" form')
     parser.add_argument(
-        '-tt', metavar='duration',
+        '-tt', metavar='fakeduration',
         help='use given fake duration to calculate the bitrate\n'
              'duration may be either in seconds or in "hh:mm:ss[.xxx]" form\n'
              'pass zero to use the full duration of video\n'
              '-tt, -tot and -vb are mutually exclusive')
     parser.add_argument(
-        '-tot', metavar='position',
+        '-tot', metavar='fakeposition',
         help='use given fake ending time to calculate the bitrate\n'
              'position may be either in seconds or in "hh:mm:ss[.xxx]" form')
     parser.add_argument(
@@ -304,6 +300,10 @@ def process_options(verinfo):
         qmax = 63 if options.qmax is None else options.qmax
         if not qmin <= options.crf <= qmax:
             parser.error('qmin <= crf <= qmax relation violated')
+    # NOTE: We use audio bitrate in ``_calc_video_bitrate`` so it should be
+    # defined. Can audio bitrate be zero? Can video and audio bitrates
+    # be float? Plese send bugreport if you have some problems with
+    # that.
     if options.ab < 1:
         parser.error('invalid audio bitrate')
     return options
@@ -394,7 +394,7 @@ def _get_durations(options):
     }
 
 
-def _get_timestamp(duration):
+def _timestamp(duration):
     idur = int(duration)
     ts = '{:02d}:{:02d}:{:02d}'.format(idur//3600, idur%3600//60, idur%60)
     frac = round(duration % 1, 1)
@@ -411,7 +411,7 @@ def _get_output_filename(options):
             options.to is not None):
         name += '_'
         shift = 0 if options.ss is None else _parse_time(options.ss)
-        name += _get_timestamp(shift)
+        name += _timestamp(shift)
         name += '-'
         if options.t:
             endpos = shift + _parse_time(options.t)
@@ -419,12 +419,12 @@ def _get_output_filename(options):
             endpos = _parse_time(options.to)
         else:
             endpos = options.induration
-        name += _get_timestamp(endpos)
+        name += _timestamp(endpos)
     name += '.webm'
     return name
 
 
-def _calc_target_bitrate(options):
+def _calc_video_bitrate(options):
     if options.tt is not None or options.tot is not None:
         outduration = options.foutduration
     else:
@@ -534,7 +534,7 @@ def encode(options):
     if options.outfile is None:
         options.outfile = _get_output_filename(options)
     if options.vb is None:
-        options.vb = _calc_target_bitrate(options)
+        options.vb = _calc_video_bitrate(options)
     options.threads = multiprocessing.cpu_count()
     options.logfile = tempfile.mkstemp(suffix='-0.log')[1]
     _encode(options, firstpass=True)
@@ -544,25 +544,28 @@ def encode(options):
 def print_stats(options, start):
     print('='*50, file=sys.stderr)
     print('Output file: {}'.format(options.outfile), file=sys.stderr)
-    print('Output duration: {}'.format(_get_timestamp(options.outduration)),
+    print('Output duration: {}'.format(_timestamp(options.outduration)),
           file=sys.stderr)
     print('Output bitrate: {}k'.format(options.vb), file=sys.stderr)
     size = os.path.getsize(options.outfile)
     sizeinfo = 'Output file size: {} B'.format(size)
-    if size > 1024:
+    if size >= 1024:
         sizeinfo += ', {:.2f} KiB'.format(size/1024)
-    if size > 1024 * 1024:
+    if size >= 1024 * 1024:
         sizeinfo += ', {:.2f} MiB'.format(size/1024/1024)
     if options.l is not None:
         limit = int(round(options.l * 1024 * 1024))
         if size > limit:
-            sizeinfo += ', overweight: {} B'.format(size - limit)
-        else:
+            sizeinfo += ', OVERWEIGHT: {} B'.format(size - limit)
+        elif size < limit:
             sizeinfo += ', underweight: {} B'.format(limit - size)
     print(sizeinfo, file=sys.stderr)
-    runtime = time.time() - start
-    print('Overall time spent: {}'.format(_get_timestamp(runtime)),
-          file=sys.stderr)
+    runtime = _timestamp(time.time() - start)
+    print('Overall time spent: {}'.format(runtime), file=sys.stderr)
+
+
+def _is_verbose(options):
+    return getattr(options, 'verbose', False)
 
 
 def cleanup(options):
