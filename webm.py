@@ -37,7 +37,6 @@ use custom location of FFmpeg executable:
 """
 
 # TODO:
-#     * Option to disable audio
 #     * Interactive seeking/cropping with mpv
 #     * Shift audio/subtitles by given amount of time
 #     * Fit audio to limit
@@ -168,7 +167,6 @@ def _is_same_paths(path1, path2):
 
 def process_options(verinfo):
     import argparse
-    class _NoLimit: pass
     doc = __doc__.format(stitle=__stitle__, title=__title__, **verinfo)
 
     parser = argparse.ArgumentParser(
@@ -228,7 +226,7 @@ def process_options(verinfo):
         '-sws', metavar='algo', default='lanczos',
         help='scaling algorithm (default: %(default)s)')
     parser.add_argument(
-        '-l', metavar='size', default=_NoLimit, type=float,
+        '-l', metavar='size', type=float,
         help='filesize limit in mebibytes (default: 8)\n'
              '-l and -vb are mutually exclusive')
     parser.add_argument(
@@ -244,9 +242,6 @@ def process_options(verinfo):
         '-qmax', metavar='qmax', type=int,
         help='set maximum (worst) quality level (0..63)')
     parser.add_argument(
-        '-ab', metavar='bitrate', default=64, type=int,
-        help='audio bitrate in kbits (default: %(default)s)')
-    parser.add_argument(
         '-vs', metavar='videostream', type=int,
         help='video stream number to use (default: best)')
     parser.add_argument(
@@ -255,6 +250,13 @@ def process_options(verinfo):
     parser.add_argument(
         '-vfi', metavar='videofilters',
         help='insert video filters at the start of filter chain')
+    parser.add_argument(
+        '-na', action='store_true',
+        help='do not include audio to the output file\n'
+             'you cannot use -na with -ab, -aa, -as, -af options')
+    parser.add_argument(
+        '-ab', metavar='bitrate', type=int,
+        help='audio bitrate in kbits (default: 64)')
     parser.add_argument(
         '-aa', metavar='audiofile',
         help='add (use) external audio file\n'
@@ -310,9 +312,9 @@ def process_options(verinfo):
             # NOTE: Input file can be in other directory or -ss/-t/-to
             # is specified so default output name will be different but
             # for now we don't bother checking this.
-            parser.error('Specify output file please')
+            parser.error('specify output file please')
     elif _is_same_paths(options.infile, options.outfile):
-        parser.error('Specify another output file please')
+        parser.error('specify another output file please')
     if options.t is not None and options.to is not None:
         parser.error('-t and -to are mutually exclusive')
     if ((options.tt is not None and options.vb is not None) or
@@ -320,12 +322,12 @@ def process_options(verinfo):
             (options.tt is not None and options.tot is not None)):
         parser.error('-tt, -tot and -vb are mutually exclusive')
     if options.vb is None:
-        if options.l is _NoLimit:
+        if options.l is None:
             options.l = 8
         elif options.l <= 0:
             parser.error('Bad limit value')
     else:
-        if options.l is not _NoLimit:
+        if options.l is not None:
             parser.error('-l and -vb are mutually exclusive')
         if options.vb < 0:
             parser.error('invalid video bitrate')
@@ -345,12 +347,23 @@ def process_options(verinfo):
         qmax = 63 if options.qmax is None else options.qmax
         if not qmin <= options.crf <= qmax:
             parser.error('qmin <= crf <= qmax relation violated')
-    # NOTE: We use audio bitrate in ``_calc_video_bitrate`` so it should be
-    # defined. Can audio bitrate be zero? Can video and audio bitrates
-    # be float? Plese send bugreport if you have some problems with
-    # that.
-    if options.ab < 1:
-        parser.error('invalid audio bitrate')
+    if options.na:
+        if (options.ab is not None or
+                options.aa is not None or
+                getattr(options, 'as') is not None or
+                options.af is not None):
+            parser.error('you cannot use -na with -ab, -aa, -as, af')
+        # No audio, i.e. its bitrate is zero.
+        options.ab = 0
+    else:
+        if options.ab is None:
+            options.ab = 64
+        elif options.ab < 1:
+            # NOTE: We use audio bitrate in ``_calc_video_bitrate`` so
+            # it should be defined. Can audio bitrate be zero? Can video
+            # and audio bitrates be float? Plese send bugreport if you
+            # have some problems with that.
+            parser.error('invalid audio bitrate')
     return options
 
 
@@ -497,7 +510,7 @@ def _encode(options, firstpass):
     passn = '1' if firstpass else '2'
     logfile = options.logfile[:-6]
     vb = '{}k'.format(options.vb) if options.vb else '0'
-    ab = '{}k'.format(options.ab)
+    ab = '{}k'.format(options.ab) if options.ab else '0'
     threads = _TEXT_TYPE(options.threads)
     speed = '4' if firstpass else '1'
     outfile = os.devnull if firstpass else options.outfile
@@ -515,9 +528,9 @@ def _encode(options, firstpass):
         args += ['-t', _TEXT_TYPE(options.outduration)]
 
     # Streams.
-    if (options.vs is not None
-            or getattr(options, 'as') is not None
-            or options.aa is not None):
+    if (options.vs is not None or
+            getattr(options, 'as') is not None or
+            options.aa is not None):
         vstream = 0 if options.vs is None else options.vs
         args += ['-map', '0:{}'.format(vstream)]
         ainput = 0 if options.aa is None else 1
@@ -576,7 +589,7 @@ def _encode(options, firstpass):
         args += ['-vf', ','.join(vfilters)]
 
     # Audio.
-    if firstpass:
+    if firstpass or options.na:
         args += ['-an']
     else:
         args += ['-c:a', 'libopus', '-b:a', ab, '-ac', '2']
