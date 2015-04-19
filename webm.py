@@ -462,8 +462,7 @@ def run_interactive_mode(options):
         os.write(luafh, MPV_SCRIPT)
     finally:
         os.close(luafh)
-    args = ['--script', luafile]
-    args += ['--msg-level', 'all=no,capture=info']
+    args = ['--script', luafile, '--msg-level', 'all=no']
     if options.poo is not None:
         args += options.poo.split()
     args += [options.infile]
