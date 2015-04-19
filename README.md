@@ -29,7 +29,7 @@ Show help:
 python webm.py -h
 ```
 
-Usage examples:
+Examples:
 ```bash
 # Fit video to default limit
 python webm.py -i in.mkv
@@ -52,3 +52,12 @@ python webm.py -i in.mkv -crf 20 -vb 600
 # Constant quality
 python webm.py -i in.mkv -crf 20 -vb 0
 ```
+## License
+
+webm.py - encode webm videos
+
+Written in 2015 by Kagami Hiiragi <kagami@genshiken.org>
+
+To the extent possible under law, the author(s) have dedicated all copyright and related and neighboring rights to this software to the public domain worldwide. This software is distributed without any warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication along with this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
