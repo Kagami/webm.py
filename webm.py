@@ -22,13 +22,14 @@ encoding modes:
   - -crf and -vb 0 enable constant quality mode
 
 examples:
-  - fit video to default limit:\tpython {title} -i in.mkv
-  - fit video to 6 MiB:\t\tpython {title} -i in.mkv -l 6
-  - set video bitrate to 600k:\tpython {title} -i in.mkv -vb 600
-  - constrained quality:\tpython {title} -i in.mkv -crf 20
-  - CQ with custom limit:\tpython {title} -i in.mkv -crf 20 -l 6
-  - CQ with custom bitrate:\tpython {title} -i in.mkv -crf 20 -vb 600
-  - constant quality:\t\tpython {title} -i in.mkv -crf 20 -vb 0
+  (use `{stitle}' instead of `python {title}' if you installed it from pip)
+  - fit video to default limit: python {title} -i in.mkv
+  - fit video to 6 MiB:         python {title} -i in.mkv -l 6
+  - set video bitrate to 600k:  python {title} -i in.mkv -vb 600
+  - constrained quality:        python {title} -i in.mkv -crf 20
+  - CQ with custom limit:       python {title} -i in.mkv -crf 20 -l 6
+  - CQ with custom bitrate:     python {title} -i in.mkv -crf 20 -vb 600
+  - constant quality:           python {title} -i in.mkv -crf 20 -vb 0
 """
 
 # TODO:
@@ -57,6 +58,7 @@ import traceback
 import subprocess
 
 
+__stitle__ = 'webm'
 __title__ = 'webm.py'
 __version__ = '0.1.1'
 __license__ = 'CC0'
@@ -138,7 +140,7 @@ def _is_same_paths(path1, path2):
 def process_options(verinfo):
     import argparse
     class _NoLimit: pass
-    doc = __doc__.format(title=__title__, **verinfo)
+    doc = __doc__.format(stitle=__stitle__, title=__title__, **verinfo)
 
     parser = argparse.ArgumentParser(
         prog=__title__,
