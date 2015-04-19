@@ -500,12 +500,10 @@ def run_interactive_mode(options):
 
     print('='*50, file=sys.stderr)
     if cut:
-        shift = _parse_time(cut[0])
-        endpos = _parse_time(cut[1])
-        print(
-            '[CUT] Start time: {}, end time: {}'.format(
-                _timestamp(shift), _timestamp(endpos)),
-            file=sys.stderr)
+        shift = _timestamp(float(cut[0]))
+        endpos = _timestamp(float(cut[1]))
+        print('[CUT] Start time: {}, end time: {}'.format(shift, endpos),
+              file=sys.stderr)
     if crop:
         print('[CROP] x1={}, y1={}, width={}, height={}'.format(
                 crop[3], crop[4], crop[1], crop[2]),
