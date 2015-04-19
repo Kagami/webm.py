@@ -1,1 +1,7 @@
+/dist/
+/webm.egg-info/
+*.pyc
+/.venv/
+/build/
+
 *.webm

@@ -20,6 +20,11 @@ export PATH=$PATH:~/.local/bin
 webm -h
 ```
 
+Or with pip:
+```bash
+[sudo] pip install webm
+```
+
 ## Usage
 
 **NOTE:** Windows users may want to add Python executable to the `PATH`. See <https://docs.python.org/3/using/windows.html#excursus-setting-environment-variables> for details. Otherwise just type the full path to your `python.exe` location instead of `python`.
