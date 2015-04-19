@@ -68,9 +68,9 @@ __license__ = 'CC0'
 _PY2 = sys.version_info[0] == 2
 _TEXT_TYPE = unicode if _PY2 else str
 _NUM_TYPES = (int, long, float) if _PY2 else (int, float)
-# We can't use ``sys.stdin.encoding``/``sys.stdout.encoding`` because
-# user can redirect the output so in Python2 it would return ``None``.
-# Seems like ``getpreferredencoding`` is the best remaining method.
+# We can't use e.g. ``sys.stdout.encoding`` because user can redirect
+# the output so in Python2 it would return ``None``. Seems like
+# ``getpreferredencoding`` is the best remaining method.
 _OS_ENCODING = locale.getpreferredencoding() or 'utf-8'
 
 
@@ -456,7 +456,7 @@ def _calc_video_bitrate(options):
     bitrate = int(_round(options.l * 8192 / outduration - options.ab))
     if bitrate < 1:
         # Prevent failing to constant/CQ mode because of too low
-        # limit/long duration.
+        # limit/long duration/big audio bitrate.
         raise Exception('Unable to calculate video bitrate')
     return bitrate
 
