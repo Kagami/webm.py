@@ -53,6 +53,7 @@ import re
 import sys
 import math
 import time
+import locale
 import tempfile
 import traceback
 import subprocess
@@ -67,6 +68,10 @@ __license__ = 'CC0'
 _PY2 = sys.version_info[0] == 2
 _TEXT_TYPE = unicode if _PY2 else str
 _NUM_TYPES = (int, long, float) if _PY2 else (int, float)
+# We can't use ``sys.stdin.encoding``/``sys.stdout.encoding`` because
+# user can redirect the output so in Python2 it would return ``None``.
+# Seems like ``getpreferredencoding`` is the best remaining method.
+_OS_ENCODING = locale.getpreferredencoding() or 'utf-8'
 
 
 def _ffmpeg(args, check_code=True, debug=False):
@@ -88,8 +93,8 @@ def _ffmpeg_output(args, check_code=True, debug=False):
     out, err = p.communicate()
     if check_code and p.returncode != 0:
         raise Exception('FFmpeg exited with error')
-    out = out.decode(sys.stdout.encoding)
-    err = err.decode(sys.stderr.encoding)
+    out = out.decode(_OS_ENCODING)
+    err = err.decode(_OS_ENCODING)
     return {'stdout': out, 'stderr': err, 'code': p.returncode}
 
 
@@ -261,7 +266,7 @@ def process_options(verinfo):
         # Convert command line arguments to unicode.
         # See: <http://stackoverflow.com/q/4012571>,
         # <https://bugs.python.org/issue2128> for details.
-        args = [arg.decode(sys.stdin.encoding) for arg in args]
+        args = [arg.decode(_OS_ENCODING) for arg in args]
     options = parser.parse_args(args)
     # Additional input options validation.
     # NOTE: We ensure only minimal checkings here to not restrict the
@@ -587,7 +592,8 @@ def print_stats(options, start):
 
 
 def _is_verbose(options):
-    return getattr(options, 'verbose', False)
+    default = '-v' in sys.argv[1:]
+    return getattr(options, 'verbose', default)
 
 
 def cleanup(options):
