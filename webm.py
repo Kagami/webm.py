@@ -63,8 +63,8 @@ import traceback
 import subprocess
 
 
-__stitle__ = 'webm'
 __title__ = 'webm.py'
+__stitle__ = 'webm'
 __version__ = '0.1.2'
 __license__ = 'CC0'
 
@@ -439,16 +439,6 @@ def _get_durations(options):
     }
 
 
-def _round(x, d=0):
-    """
-    round function from Python2. See
-    <http://python3porting.com/differences.html#rounding-behavior> for
-    details.
-    """
-    p = 10 ** d
-    return float(math.floor((x * p) + math.copysign(0.5, x)))/p
-
-
 def _timestamp(duration):
     idur = int(duration)
     ts = '{:02d}:{:02d}:{:02d}'.format(idur//3600, idur%3600//60, idur%60)
@@ -477,6 +467,16 @@ def _get_output_filename(options):
         name += _timestamp(endpos)
     name += '.webm'
     return name
+
+
+def _round(x, d=0):
+    """
+    round function from Python2. See
+    <http://python3porting.com/differences.html#rounding-behavior> for
+    details.
+    """
+    p = 10 ** d
+    return float(math.floor((x * p) + math.copysign(0.5, x)))/p
 
 
 def _calc_video_bitrate(options):
