@@ -58,7 +58,7 @@ import subprocess
 
 
 __title__ = 'webm.py'
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 __license__ = 'CC0'
 
 
