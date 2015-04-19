@@ -125,9 +125,10 @@ def check_dependencies():
             (sys.version_info[0] == 3 and sys.version_info[1] < 2)):
         raise Exception(
             'Python version must be 2.7+ or 3.2+, using: {}'.format(pythonv))
-    verout = _ffmpeg_output(['-version'])['stdout']
+
+    ffverout = _ffmpeg_output(['-version'])['stdout']
     try:
-        line = verout.split('\n', 1)[0]
+        line = ffverout.split('\n', 1)[0]
         ffmpegv = re.match(r'ffmpeg version (\S+)', line).group(1)
     except Exception:
         raise Exception('Cannot parse FFmpeg version')
@@ -140,12 +141,14 @@ def check_dependencies():
     else:
         # Most probably version from git. Do nothing.
         pass
+
     codecout = _ffmpeg_output(['-codecs'])['stdout']
     if not re.search(r'encoders:.*\blibvpx-vp9\b', codecout):
         raise Exception(
             'FFmpeg is not compiled with libvpx (libvpx-vp9) support')
     if not re.search(r'encoders:.*\blibopus\b', codecout):
         raise Exception('FFmpeg is not compiled with libopus support')
+
     return {'pythonv': pythonv, 'ffmpegv': ffmpegv}
 
 
@@ -285,6 +288,10 @@ def process_options(verinfo):
         '-ooi', metavar='ffmpegopts',
         help='raw FFmpeg options to insert before first input\n'
              "example: -ooi='-loop 1' (equal sign is mandatory)")
+    parser.add_argument(
+        '-nc', action='store_true',
+        help='skip any dependency/version checkings\n'
+             'advanced option, use at your own risk')
 
     args = sys.argv[1:]
     if _PY2:
@@ -640,9 +647,11 @@ def cleanup(options):
 
 def main():
     start = time.time()
+    verinfo = {'pythonv': '?', 'ffmpegv': '?'}
     options = None
     try:
-        verinfo = check_dependencies()
+        if '-nc' not in sys.argv[1:]:
+            verinfo = check_dependencies()
         options = process_options(verinfo)
         encode(options)
         print_stats(options, start)
