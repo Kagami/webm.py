@@ -833,7 +833,7 @@ def main():
         cleanup(options)
 
 
-MPV_SCRIPT = rb"""
+MPV_SCRIPT = br"""
 capture = {}
 function log(str)
     io.stdout:write(str .. "\n")
