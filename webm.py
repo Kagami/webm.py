@@ -260,6 +260,10 @@ def process_options(verinfo):
         '-oo', metavar='ffmpegopts',
         help='additional raw FFmpeg options\n'
              "example: -oo='-aspect 16:9' (equal sign is mandatory)")
+    parser.add_argument(
+        '-ooi', metavar='ffmpegopts',
+        help='raw FFmpeg options to insert before first input\n'
+             "example: -ooi='-loop 1' (equal sign is mandatory)")
 
     args = sys.argv[1:]
     if _PY2:
@@ -474,6 +478,8 @@ def _encode(options, firstpass):
     args = ['-hide_banner']
     if options.ss is not None:
         args += ['-ss', options.ss]
+    if options.ooi is not None:
+        args += options.ooi.split()
     args += ['-i', options.infile]
     if options.aa is not None:
         args += ['-i', options.aa]

@@ -6,7 +6,7 @@ from webm import __version__
 
 
 setup(
-    # Reference: <http://pythonhosted.org/distribute/setuptools.html>
+    # Reference: <http://pythonhosted.org/distribute/setuptools.html>.
     name='webm',
     version=__version__,
     author='Kagami Hiiragi',
