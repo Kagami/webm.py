@@ -10,10 +10,12 @@ features:
   - allows to select video/audio streams and external audio track
   - can burn subtitles into the video
   - flexible set of options and ability to pass raw flags to FFmpeg
+  - interactive mode to cut/crop input video
 
 dependencies:
   - Python 2.7+ or 3.2+ (using: {pythonv})
   - FFmpeg 2+ compiled with libvpx and libopus (using: {ffmpegv})
+  - mpv 0.8+ compiled with lua support, optional (using: {mpvv})
 
 encoding modes:
   - by default bitrate calculated to fit the output video to limit
@@ -37,7 +39,6 @@ use custom location of FFmpeg executable:
 """
 
 # TODO:
-#     * Interactive seeking/cropping with mpv
 #     * Shift audio/subtitles by given amount of time
 #     * Fit audio to limit
 #     * Optionally use mkvmerge for muxing
@@ -86,6 +87,10 @@ FFMPEG_PATH = os.getenv('FFMPEG', 'ffmpeg')
 if _PY2: FFMPEG_PATH = FFMPEG_PATH.decode(OS_ENCODING)
 
 
+MPV_PATH = os.getenv('MPV', 'mpv')
+if _PY2: MPV_PATH = MPV_PATH.decode(OS_ENCODING)
+
+
 # Option ``options.tt`` can take the following values:
 # - ``None`` by default
 # - ``_FullFakeDuration`` if user skipped the value of -tt
@@ -125,6 +130,24 @@ def _ffmpeg_output(args, check_code=True, debug=False):
     return {'stdout': out, 'stderr': err, 'code': p.returncode}
 
 
+def _mpv_output(args, check_code=True, catch_stderr=True, debug=False):
+    args = [MPV_PATH] + args
+    if debug:
+        print('='*50 + '\n' + ' '.join(args) + '\n' + '='*50, file=sys.stderr)
+    kwargs = {'stderr': subprocess.PIPE} if catch_stderr else {}
+    try:
+        p = subprocess.Popen(args, stdout=subprocess.PIPE, **kwargs)
+    except Exception as exc:
+        raise Exception('Failed to run mpv ({})'.format(exc))
+    out, err = p.communicate()
+    if check_code and p.returncode != 0:
+        raise Exception('FFmpeg exited with error')
+    out = out.decode(OS_ENCODING)
+    if catch_stderr:
+        err = err.decode(OS_ENCODING)
+    return {'stdout': out, 'stderr': err, 'code': p.returncode}
+
+
 def check_dependencies():
     pythonv = '{}.{}.{}'.format(*sys.version_info)
     if ((sys.version_info[0] == 2 and sys.version_info[1] < 7) or
@@ -155,7 +178,31 @@ def check_dependencies():
     if not re.search(r'encoders:.*\blibopus\b', codecout):
         raise Exception('FFmpeg is not compiled with libopus support')
 
-    return {'pythonv': pythonv, 'ffmpegv': ffmpegv}
+    mpvv = 'no'
+    need_mpv = '-p' in sys.argv[1:]
+    try:
+        mverout = _mpv_output(['--version'])['stdout']
+    except Exception:
+        if need_mpv:
+            raise
+    else:
+        try:
+            mpvv = re.match(r'mpv (\S+)', mverout).group(1)
+        except Exception:
+            if need_mpv:
+                raise Exception('Cannot parse mpv version')
+        else:
+            # NOTE: Checking only for '^x.y.z', possible non-numeric symbols
+            # after 'z' don't matter.
+            if need_mpv and re.match(r'\d+\.\d+\.\d+', mpvv):
+                major, minor, _ = mpvv.split('.', 2)
+                if int(major) == 0 and int(minor) < 8:
+                    raise Exception('mpv version must be 0.8+, '
+                                    'using: {}'.format(ffmpegv))
+            else:
+                pass
+
+    return {'pythonv': pythonv, 'ffmpegv': ffmpegv, 'mpvv': mpvv}
 
 
 def _is_same_paths(path1, path2):
@@ -287,6 +334,14 @@ def process_options(verinfo):
              'subtitle stream across other subtitles; see ffmpeg-filters(1)\n'
              'for details')
     parser.add_argument(
+        '-p', action='store_true',
+        help='run player (mpv) in interactive mode to cut and crop video\n'
+             'you cannot use -p with -ss, -t, -to options')
+    parser.add_argument(
+        '-poo', metavar='mpvopts',
+        help='additional raw player (mpv) options\n'
+             "example: -poo='--no-config' (equal sign is mandatory)")
+    parser.add_argument(
         '-mn', action='store_true',
         help='strip metadata from the output file')
     parser.add_argument(
@@ -371,6 +426,11 @@ def process_options(verinfo):
             # and audio bitrates be float? Plese send bugreport if you
             # have some problems with that.
             parser.error('invalid audio bitrate')
+    if options.p:
+        if (options.ss is not None or
+                options.t is not None or
+                options.to is not None):
+            parser.error('you cannot use -p with -ss, -t, -to options')
     return options
 
 
@@ -392,6 +452,87 @@ def _parse_time(time):
             duration += int(minutes) * 60
             duration += int(hours) * 3600
     return duration
+
+
+def run_interactive_mode(options):
+    # NOTE: mpv ignores lua script without suffix.
+    luafh, luafile = tempfile.mkstemp(suffix='.lua')
+    try:
+        options.luafile = luafile
+        os.write(luafh, MPV_SCRIPT)
+    finally:
+        os.close(luafh)
+    args = ['--script', luafile]
+    args += ['--msg-level', 'all=no,capture=info']
+    if options.poo is not None:
+        args += options.poo.split()
+    args += [options.infile]
+    print('Running interactive mode', file=sys.stderr)
+    print('Press "a" first time to mark start of the fragment, '
+          'press it again to mark end of the fragment',
+          file=sys.stderr)
+    print('Press "KP1" after "a" to define the fragment from '
+          'the start to the marked time', file=sys.stderr)
+    print('Press "KP2" after "a" to define the fragment from '
+          'the marked time to the end of the video', file=sys.stderr)
+    print('Move mouse cursor to the first point of crop rectangle '
+          'and press "c", move cursor to the opposite point and '
+          'press "c" again to define the crop region', file=sys.stderr)
+
+    # We let the user to see stderr output and catch stdout by ourself.
+    out = _mpv_output(args, debug=True, catch_stderr=False)['stdout']
+    cut = None
+    crop = None
+    for line in reversed(out.split()):
+        if not cut:
+            cutm = re.match(r'cut=(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)$', line)
+            if cutm:
+                cut = cutm.groups()
+                if crop:
+                    break
+                continue
+        if not crop:
+            cropm = re.match(r'(crop=(\d+):(\d+):(\d+):(\d+))$', line)
+            if cropm:
+                crop = cropm.groups()
+                if cut:
+                    break
+
+    print('='*50, file=sys.stderr)
+    if cut:
+        shift = _parse_time(cut[0])
+        endpos = _parse_time(cut[1])
+        print(
+            '[CUT] Start time: {}, end time: {}'.format(
+                _timestamp(shift), _timestamp(endpos)),
+            file=sys.stderr)
+    if crop:
+        print('[CROP] x1={}, y1={}, width={}, height={}'.format(
+                crop[3], crop[4], crop[1], crop[2]),
+              file=sys.stderr)
+
+    if cut or crop:
+        try:
+            ok = input('Continue with that settings? Y/n ')
+        except EOFError:
+            sys.exit(1)
+        if ok == '' or ok.lower() == 'y':
+            if cut:
+                options.ss = cut[0]
+                options.to = cut[1]
+            if crop:
+                options.vfi = crop[0] if options.vfi is None \
+                    else '{},{}'.format(options.vfi, crop[0])
+        else:
+            sys.exit(1)
+    else:
+        try:
+            print("You haven't chosen neither cut nor crop.", file=sys.stderr)
+            ok = input('Encode input video intact? y/N ')
+        except EOFError:
+            sys.exit(1)
+        if ok == '' or ok.lower() == 'n':
+            sys.exit(1)
 
 
 def _get_durations(options):
@@ -662,6 +803,8 @@ def cleanup(options):
     try:
         if hasattr(options, 'logfile'):
             os.remove(options.logfile)
+        if hasattr(options, 'luafile'):
+            os.remove(options.luafile)
     except Exception as exc:
         if _is_verbose(options):
             exc = '\n\n' + traceback.format_exc()[:-1]
@@ -670,12 +813,14 @@ def cleanup(options):
 
 def main():
     start = time.time()
-    verinfo = {'pythonv': '?', 'ffmpegv': '?'}
+    verinfo = {'pythonv': '?', 'ffmpegv': '?', 'mpvv': '?'}
     options = None
     try:
         if '-cn' not in sys.argv[1:]:
             verinfo = check_dependencies()
         options = process_options(verinfo)
+        if options.p:
+            run_interactive_mode(options)
         encode(options)
         print_stats(options, start)
     except Exception as exc:
@@ -686,6 +831,71 @@ def main():
         sys.exit(1)
     finally:
         cleanup(options)
+
+
+MPV_SCRIPT = rb"""
+capture = {}
+function log(str)
+    io.stdout:write(str .. "\n")
+    io.stderr:write(str .. "\n")
+end
+function cut()
+    local pos = mp.get_property("time-pos")
+    if capture.shift then
+        local shift, endpos = capture.shift, pos
+        if shift > endpos then
+            shift, endpos = endpos, shift
+        end
+        log(string.format("cut=%f:%f", shift, endpos))
+        capture.shift = nil
+    else
+        capture.shift = pos
+        log(string.format("Marked %f as start position", pos))
+    end
+end
+function cut_from_start()
+    if capture.shift then
+        log(string.format("cut=0:%f", capture.shift))
+        capture.shift = nil
+    else
+        log("End position was't marked")
+    end
+end
+function cut_to_end()
+    if capture.shift then
+        local endpos = mp.get_property("length")
+        log(string.format("cut=%f:%f", capture.shift, endpos))
+        capture.shift = nil
+    else
+        log("Start position was't marked")
+    end
+end
+function crop()
+    local x, y = mp.get_mouse_pos()
+    -- mouse pos returned by mpv are scaled so we fix them.
+    local resX, resY = mp.get_osd_resolution()
+    local sw = mp.get_property("width") / resX
+    local sh = mp.get_property("height") / resY
+    x = x * sw
+    y = y * sh
+    if capture.pos1 then
+        local x1, y1 = capture.pos1[1], capture.pos1[2]
+        local cropw = math.abs(x - x1)
+        local croph = math.abs(y - y1)
+        local cropx = math.min(x, x1)
+        local cropy = math.min(y, y1)
+        log(string.format("crop=%d:%d:%d:%d", cropw, croph, cropx, cropy))
+        capture.pos1 = nil
+    else
+        capture.pos1 = {x, y}
+        log(string.format("Marked %d:%d as top left edge", x, y))
+    end
+end
+mp.add_key_binding("a", "cut", cut)
+mp.add_key_binding("KP1", "cut_from_start", cut_from_start)
+mp.add_key_binding("KP2", "cut_to_end", cut_to_end)
+mp.add_key_binding("c", "crop", crop)
+"""
 
 
 if __name__ == '__main__':
