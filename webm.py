@@ -86,6 +86,13 @@ FFMPEG_PATH = os.getenv('FFMPEG', 'ffmpeg')
 if _PY2: FFMPEG_PATH = FFMPEG_PATH.decode(OS_ENCODING)
 
 
+# Option ``options.tt`` can take the following values:
+# - ``None`` by default
+# - ``_FullFakeDuration`` if user skipped the value of -tt
+# - value of -tt option
+class _FullFakeDuration: pass
+
+
 def _ffmpeg(args, check_code=True, debug=False):
     args = [FFMPEG_PATH] + args
     if debug:
@@ -204,10 +211,10 @@ def process_options(verinfo):
         help='stop writing the output at position\n'
              'position may be either in seconds or in "hh:mm:ss[.xxx]" form')
     parser.add_argument(
-        '-tt', metavar='fakeduration',
+        '-tt', metavar='fakeduration', nargs='?', const=_FullFakeDuration,
         help='use given fake duration to calculate the bitrate\n'
              'duration may be either in seconds or in "hh:mm:ss[.xxx]" form\n'
-             'pass zero to use the full duration of video\n'
+             'skip value to use the full duration of video\n'
              '-tt, -tot and -vb are mutually exclusive')
     parser.add_argument(
         '-tot', metavar='fakeposition',
@@ -251,9 +258,9 @@ def process_options(verinfo):
         '-vfi', metavar='videofilters',
         help='insert video filters at the start of filter chain')
     parser.add_argument(
-        '-na', action='store_true',
+        '-an', action='store_true',
         help='do not include audio to the output file\n'
-             'you cannot use -na with -ab, -aa, -as, -af options')
+             'you cannot use -an with -ab, -aa, -as, -af options')
     parser.add_argument(
         '-ab', metavar='bitrate', type=int,
         help='audio bitrate in kbits (default: 64)')
@@ -280,7 +287,7 @@ def process_options(verinfo):
              'subtitle stream across other subtitles; see ffmpeg-filters(1)\n'
              'for details')
     parser.add_argument(
-        '-nm', action='store_true',
+        '-mn', action='store_true',
         help='strip metadata from the output file')
     parser.add_argument(
         '-oo', metavar='ffmpegopts',
@@ -291,7 +298,7 @@ def process_options(verinfo):
         help='raw FFmpeg options to insert before first input\n'
              "example: -ooi='-loop 1' (equal sign is mandatory)")
     parser.add_argument(
-        '-nc', action='store_true',
+        '-cn', action='store_true',
         help='skip any dependency/version checkings\n'
              'advanced option, use at your own risk')
 
@@ -347,12 +354,12 @@ def process_options(verinfo):
         qmax = 63 if options.qmax is None else options.qmax
         if not qmin <= options.crf <= qmax:
             parser.error('qmin <= crf <= qmax relation violated')
-    if options.na:
+    if options.an:
         if (options.ab is not None or
                 options.aa is not None or
                 getattr(options, 'as') is not None or
                 options.af is not None):
-            parser.error('you cannot use -na with -ab, -aa, -as, af')
+            parser.error('you cannot use -an with -ab, -aa, -as, af')
         # No audio, i.e. its bitrate is zero.
         options.ab = 0
     else:
@@ -427,11 +434,14 @@ def _get_durations(options):
 
     # Validate fake ranges.
     if options.tt is not None:
-        foutduration = _parse_time(options.tt)
-        if foutduration == 0:
+        if options.tt is _FullFakeDuration:
             foutduration = induration
-        elif foutduration > induration:
-            raise Exception('End position too far in the future')
+        else:
+            foutduration = _parse_time(options.tt)
+            if foutduration == 0:
+                raise Exception('Duration must not be zero')
+            elif foutduration > induration:
+                raise Exception('End position too far in the future')
     elif options.tot is not None:
         fendpos = _parse_time(options.tot)
         foutduration = fendpos - shift
@@ -538,7 +548,7 @@ def _encode(options, firstpass):
         if astream is None:
             astream = 1 if options.aa is None else 0
         args += ['-map', '{}:{}'.format(ainput, astream)]
-    if options.nm:
+    if options.mn:
         args += ['-map_metadata', '-1']
 
     # Video.
@@ -589,7 +599,7 @@ def _encode(options, firstpass):
         args += ['-vf', ','.join(vfilters)]
 
     # Audio.
-    if firstpass or options.na:
+    if firstpass or options.an:
         args += ['-an']
     else:
         args += ['-c:a', 'libopus', '-b:a', ab, '-ac', '2']
@@ -663,7 +673,7 @@ def main():
     verinfo = {'pythonv': '?', 'ffmpegv': '?'}
     options = None
     try:
-        if '-nc' not in sys.argv[1:]:
+        if '-cn' not in sys.argv[1:]:
             verinfo = check_dependencies()
         options = process_options(verinfo)
         encode(options)
