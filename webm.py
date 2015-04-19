@@ -33,11 +33,10 @@ examples:
 
 # TODO:
 #     * Option to disable audio
-#     * Accept image/gif as video source
-#     * Fit audio to limit
-#     * Optionally use mkvmerge for muxing
 #     * Interactive seeking/cropping with mpv
 #     * Shift audio/subtitles by given amount of time
+#     * Fit audio to limit
+#     * Optionally use mkvmerge for muxing
 #     * Best quality mode
 
 # Since there is no way to wrap future imports in try/except, we use
