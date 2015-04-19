@@ -30,6 +30,10 @@ examples:
   - CQ with custom limit:       python {title} -i in.mkv -crf 20 -l 6
   - CQ with custom bitrate:     python {title} -i in.mkv -crf 20 -vb 600
   - constant quality:           python {title} -i in.mkv -crf 20 -vb 0
+
+use custom location of FFmpeg executable:
+  - *nix:    FFMPEG=/opt/ffmpeg/ffmpeg python {title} -i in.mkv
+  - Windows: set FFMPEG=C:\\ffmpeg.exe & python {title} -i in.mkv
 """
 
 # TODO:
@@ -68,17 +72,29 @@ __license__ = 'CC0'
 _PY2 = sys.version_info[0] == 2
 _TEXT_TYPE = unicode if _PY2 else str
 _NUM_TYPES = (int, long, float) if _PY2 else (int, float)
+
+
 # We can't use e.g. ``sys.stdout.encoding`` because user can redirect
 # the output so in Python2 it would return ``None``. Seems like
 # ``getpreferredencoding`` is the best remaining method.
-_OS_ENCODING = locale.getpreferredencoding() or 'utf-8'
+OS_ENCODING = locale.getpreferredencoding() or 'utf-8'
+
+
+FFMPEG_PATH = os.getenv('FFMPEG', 'ffmpeg')
+# XXX: This probably may fail on non UTF-8 locales.
+# Python 3 uses ``getfilesystemencoding`` to decode environment
+# variables: <https://docs.python.org/3/library/os.html#os.getenv>.
+if _PY2: FFMPEG_PATH = FFMPEG_PATH.decode(OS_ENCODING)
 
 
 def _ffmpeg(args, check_code=True, debug=False):
-    args = ['ffmpeg'] + args
+    args = [FFMPEG_PATH] + args
     if debug:
         print('='*50 + '\n' + ' '.join(args) + '\n' + '='*50, file=sys.stderr)
-    p = subprocess.Popen(args)
+    try:
+        p = subprocess.Popen(args)
+    except Exception as exc:
+        raise Exception('Failed to run FFmpeg ({})'.format(exc))
     p.communicate()
     if check_code and p.returncode != 0:
         raise Exception('FFmpeg exited with error')
@@ -86,15 +102,20 @@ def _ffmpeg(args, check_code=True, debug=False):
 
 
 def _ffmpeg_output(args, check_code=True, debug=False):
-    args = ['ffmpeg'] + args
+    args = [FFMPEG_PATH] + args
     if debug:
         print('='*50 + '\n' + ' '.join(args) + '\n' + '='*50, file=sys.stderr)
-    p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        p = subprocess.Popen(
+                args, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+    except Exception as exc:
+        raise Exception('Failed to run FFmpeg ({})'.format(exc))
     out, err = p.communicate()
     if check_code and p.returncode != 0:
         raise Exception('FFmpeg exited with error')
-    out = out.decode(_OS_ENCODING)
-    err = err.decode(_OS_ENCODING)
+    out = out.decode(OS_ENCODING)
+    err = err.decode(OS_ENCODING)
     return {'stdout': out, 'stderr': err, 'code': p.returncode}
 
 
@@ -270,7 +291,7 @@ def process_options(verinfo):
         # Convert command line arguments to unicode.
         # See: <http://stackoverflow.com/q/4012571>,
         # <https://bugs.python.org/issue2128> for details.
-        args = [arg.decode(_OS_ENCODING) for arg in args]
+        args = [arg.decode(OS_ENCODING) for arg in args]
     options = parser.parse_args(args)
     # Additional input options validation.
     # NOTE: We ensure only minimal checkings here to not restrict the
