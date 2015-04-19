@@ -453,7 +453,12 @@ def _calc_video_bitrate(options):
     else:
         outduration = options.outduration
     # mebibytes * 1024 * 8 = kbits
-    return int(_round(options.l * 8192 / outduration - options.ab))
+    bitrate = int(_round(options.l * 8192 / outduration - options.ab))
+    if bitrate < 1:
+        # Prevent failing to constant/CQ mode because of too low
+        # limit/long duration.
+        raise Exception('Unable to calculate video bitrate')
+    return bitrate
 
 
 def _encode(options, firstpass):
