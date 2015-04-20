@@ -850,7 +850,6 @@ def cleanup(options):
 
 
 def main():
-    start = time.time()
     verinfo = {'pythonv': '?', 'ffmpegv': '?', 'mpvv': '?'}
     options = None
     try:
@@ -859,6 +858,7 @@ def main():
         options = process_options(verinfo)
         if options.p:
             run_interactive_mode(options)
+        start = time.time()
         encode(options)
         print_stats(options, start)
     except Exception as exc:
