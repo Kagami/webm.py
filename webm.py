@@ -991,13 +991,16 @@ function crop_drag_start()
     local x, y = mp.get_mouse_pos()
     if crop_active then
         if math.min(crop_x1, crop_x2) <= x and
-                math.min(crop_y1, crop_y2) <= y then
+                math.min(crop_y1, crop_y2) <= y and
+                x <= math.max(crop_x1, crop_x2) and
+                y <= math.max(crop_y1, crop_y2) then
             crop_moving = true
             move_x, move_y = x, y
         else
             crop_resizing = true
             crop_x1, crop_y1 = x, y
             crop_x2, crop_y2 = x, y
+            clear_scr()
         end
     else
         -- Reinit values on each new crop.
