@@ -457,6 +457,15 @@ def _parse_time(time):
     return duration
 
 
+def _timestamp(duration):
+    idur = int(duration)
+    ts = '{:02d}:{:02d}:{:02d}'.format(idur//3600, idur%3600//60, idur%60)
+    frac = duration % 1
+    if frac >= 0.1:
+        ts += _TEXT_TYPE(frac)[1:3]
+    return ts
+
+
 def _get_mpv_log_prefix(path):
     """
     Analogue of ``script_name_from_filename`` from
@@ -522,10 +531,9 @@ def run_interactive_mode(options):
     print('='*50, file=sys.stderr)
     if cut:
         # ``-1`` is a special value and defines start/end of the file.
-        shift = _timestamp(0 if cut[0] == '-1' else float(cut[0]))
+        shift = '0' if cut[0] == '-1' else _timestamp(float(cut[0]))
         endpos = 'EOF' if cut[1] == '-1' else _timestamp(float(cut[1]))
-        print('[CUT] Start time: {}, end time: {}'.format(shift, endpos),
-              file=sys.stderr)
+        print('[CUT] {} - {}'.format(shift, endpos), file=sys.stderr)
     if crop:
         print('[CROP] x1={}, y1={}, width={}, height={}'.format(
                 crop[3], crop[4], crop[1], crop[2]),
@@ -623,15 +631,6 @@ def _get_durations(options):
         'outduration': outduration,
         'foutduration': foutduration,
     }
-
-
-def _timestamp(duration):
-    idur = int(duration)
-    ts = '{:02d}:{:02d}:{:02d}'.format(idur//3600, idur%3600//60, idur%60)
-    frac = duration % 1
-    if frac >= 0.1:
-        ts += _TEXT_TYPE(frac)[1:3]
-    return ts
 
 
 def _get_output_filename(options):
@@ -860,14 +859,30 @@ capture = {}
 
 function log2user(str)
     io.stdout:write(str .. "\n")
+    mp.osd_message(str, 2)
 end
 
 function log2webm(str)
     io.stderr:write(str .. "\n")
 end
 
+function timestamp(duration)
+    -- We can just use `get_property_osd` instead of this but it would
+    -- require to store another value between the function calls.
+    local hours = duration / 3600
+    local minutes = duration % 3600 / 60
+    local seconds = duration % 60
+    local ts = string.format("%02d:%02d:%02d", hours, minutes, seconds)
+    local frac = duration % 1
+    if frac >= 0.1 then
+        ts = ts .. string.sub(frac, 2, 3)
+    end
+    return ts
+end
+
 function cut()
     local pos = mp.get_property_number("time-pos")
+    print(mp.get_property_osd("time-pos"))
     if capture.shift ~= nil then
         local shift, endpos = capture.shift, pos
         if shift > endpos then
@@ -878,13 +893,14 @@ function cut()
         else
             log2webm(string.format("cut=%f:%f", shift, endpos))
             log2user(string.format(
-                "Defined cut fragment as start time: %f, end time: %f",
-                shift, endpos))
+                "Cut fragment: %s - %s",
+                timestamp(shift), timestamp(endpos)))
+            mp.commandv("osd-bar", "show_progress")
         end
         capture.shift = nil
     else
         capture.shift = pos
-        log2user(string.format("Marked %f as start position", pos))
+        log2user(string.format("Marked %s as start position", timestamp(pos)))
     end
 end
 
@@ -896,8 +912,9 @@ function cut_from_start()
         else
             log2webm(string.format("cut=-1:%f", capture.shift))
             log2user(string.format(
-                "Defined cut fragment as start time: 0, end time: %f",
-                capture.shift))
+                "Cut fragment: 0 - %s",
+                timestamp(capture.shift)))
+            mp.commandv("osd-bar", "show_progress")
         end
         capture.shift = nil
     else
@@ -913,8 +930,9 @@ function cut_to_end()
         else
             log2webm(string.format("cut=%f:-1", capture.shift))
             log2user(string.format(
-                "Defined cut fragment as start time: %f, end time: EOF",
-                capture.shift))
+                "Cut fragment: %s - EOF",
+                timestamp(capture.shift)))
+            mp.commandv("osd-bar", "show_progress")
         end
         capture.shift = nil
     else
