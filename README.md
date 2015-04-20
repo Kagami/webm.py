@@ -6,6 +6,7 @@ Just another bikeshed to encode webm VP9 videos. Nothing interesting here.
 
 * [Python](https://www.python.org/downloads/) 2.7+ or 3.2+
 * [FFmpeg](https://ffmpeg.org/download.html) 2+ compiled with libvpx and libopus
+* *[mpv](http://mpv.io/installation/) 0.8+ compiled with Lua support, for interactive mode only*
 
 ## Installation
 
@@ -57,6 +58,13 @@ python webm.py -i in.mkv -crf 20 -vb 600
 # Constant quality
 python webm.py -i in.mkv -crf 20 -vb 0
 ```
+
+### Interactive mode
+
+Pass `-p` flag to interactively select cut frargment/crop area with mpv. Demo:
+
+[![](http://dump.bitcheese.net/images/otipulo/22.png)](http://dump.bitcheese.net/images/iwoguse/2.png)
+
 ## License
 
 webm.py - encode webm videos
