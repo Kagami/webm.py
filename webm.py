@@ -498,7 +498,7 @@ def run_interactive_mode(options):
           file=sys.stderr)
     print('Press "KP1" after "a" to define the fragment from '
           'the start to the marked time', file=sys.stderr)
-    print('Press "KP2" after "a" to define the fragment from '
+    print('Press "KP3" after "a" to define the fragment from '
           'the marked time to the end of the video', file=sys.stderr)
     print('Move mouse cursor to the first edge of crop area '
           'and press "c", move cursor to the opposite edge and '
@@ -974,7 +974,7 @@ end
 
 mp.add_key_binding("a", "webm_cut", cut)
 mp.add_key_binding("KP1", "webm_cut_from_start", cut_from_start)
-mp.add_key_binding("KP2", "webm_cut_to_end", cut_to_end)
+mp.add_key_binding("KP3", "webm_cut_to_end", cut_to_end)
 mp.add_key_binding("c", "webm_crop", crop)
 """
 
