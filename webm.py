@@ -477,7 +477,33 @@ def _get_mpv_log_prefix(path):
     return name
 
 
+def _doc_to_help(doc):
+    doc = doc.strip()
+    lines = doc.split('\n')
+    lines = [line.strip() for line in lines]
+    return '\n'.join(lines)
+
+
 def run_interactive_mode(options):
+    """
+    Running interactive mode.
+
+    Press "c" first time to mark the start of the fragment.
+    Press it again to mark the end of the fragment.
+    Press "KP1" after "c" to define the fragment from
+    the start to the marked time.
+    Press "KP3" after "c" to define the fragment from
+    the marked time to the end of the video.
+
+    Select crop area with the mouse and adijust it precisely with
+    KP4/KP8/KP6/KP2 (move crop area left/up/right/down) and
+    KP7/KP9/-/+ (decrease/increase width/height).
+    Press KP_ENTER when you finished with crop.
+
+    Once you defined cut fragment and/or crop are, close the
+    player and let the script do all hard work for calculating
+    the bitrate and encoding.
+    """
     # NOTE: mpv ignores Lua scripts without suffix.
     luafh, luafile = tempfile.mkstemp(suffix='.lua')
     options.luafile = luafile
@@ -486,23 +512,14 @@ def run_interactive_mode(options):
     finally:
         os.close(luafh)
 
-    args = ['--script', luafile]
+    # Disabling OSC since it conflicts with interactive mode.
+    args = ['--no-osc', '--script', luafile]
     script_log_prefix = _get_mpv_log_prefix(luafile)
     args += ['--msg-level', 'all=no,{}=warn'.format(script_log_prefix)]
     if options.poo is not None:
         args += options.poo.split()
     args += [options.infile]
-    print('Running interactive mode', file=sys.stderr)
-    print('Press "a" first time to mark start of the fragment, '
-          'press it again to mark end of the fragment',
-          file=sys.stderr)
-    print('Press "KP1" after "a" to define the fragment from '
-          'the start to the marked time', file=sys.stderr)
-    print('Press "KP3" after "a" to define the fragment from '
-          'the marked time to the end of the video', file=sys.stderr)
-    print('Move mouse cursor to the first edge of crop area '
-          'and press "c", move cursor to the opposite edge and '
-          'press "c" again to define the crop region', file=sys.stderr)
+    print(_doc_to_help(run_interactive_mode.__doc__), file=sys.stderr)
 
     # We let the user to see stderr output and catch stdout by ourself.
     out = _mpv_output(args, debug=True, catch_stdout=False)['stderr']
@@ -556,7 +573,7 @@ def run_interactive_mode(options):
         else:
             sys.exit(1)
     else:
-        print("You haven't chosen neither cut nor crop.", file=sys.stderr)
+        print("You haven't defined neither cut nor crop.", file=sys.stderr)
         try:
             ok = input('Encode input video intact? y/N ')
         except EOFError:
@@ -855,7 +872,23 @@ def main():
 
 
 MPV_SCRIPT = br"""
-capture = {}
+local assdraw = require "mp.assdraw"
+
+local CROP_ALPHA = 180
+local CROP_X_STEP = 2
+local CROP_Y_STEP = 2
+
+local cut_pos = nil
+local crop_active = false
+local crop_resizing = false
+local crop_moving = false
+local sw, sh = 0, 0
+-- NOTE: That's not a real values, but a scaled ones. You need to
+-- multiple them to sw/sh before returning back to user.
+local width, height = 0, 0
+-- x2 can be less than x1, y2 can be less than y1.
+local crop_x1, crop_y1, crop_x2, crop_y2 = 0, 0, 0, 0
+local move_x, move_y = 0, 0
 
 function log2user(str)
     io.stdout:write(str .. "\n")
@@ -882,8 +915,8 @@ end
 
 function cut()
     local pos = mp.get_property_number("time-pos")
-    if capture.shift ~= nil then
-        local shift, endpos = capture.shift, pos
+    if cut_pos ~= nil then
+        local shift, endpos = cut_pos, pos
         if shift > endpos then
             shift, endpos = endpos, shift
         end
@@ -896,86 +929,232 @@ function cut()
                 timestamp(shift), timestamp(endpos)))
             mp.commandv("osd-bar", "show_progress")
         end
-        capture.shift = nil
+        cut_pos = nil
     else
-        capture.shift = pos
+        cut_pos = pos
         log2user(string.format("Marked %s as start position", timestamp(pos)))
     end
 end
 
 function cut_from_start()
     -- NOTE: 0 is truly value in Lua...
-    if capture.shift ~= nil then
-        if capture.shift == 0 then
+    if cut_pos ~= nil then
+        if cut_pos == 0 then
             log2user("Cut fragment is empty")
         else
-            log2webm(string.format("cut=-1:%f", capture.shift))
+            log2webm(string.format("cut=-1:%f", cut_pos))
             log2user(string.format(
                 "Cut fragment: 0 - %s",
-                timestamp(capture.shift)))
+                timestamp(cut_pos)))
             mp.commandv("osd-bar", "show_progress")
         end
-        capture.shift = nil
+        cut_pos = nil
     else
         log2user("End position was't marked")
     end
 end
 
 function cut_to_end()
-    if capture.shift ~= nil then
+    if cut_pos ~= nil then
         local endpos = mp.get_property_number("length")
-        if capture.shift == endpos then
+        if cut_pos == endpos then
             log2user("Cut fragment is empty")
         else
-            log2webm(string.format("cut=%f:-1", capture.shift))
+            log2webm(string.format("cut=%f:-1", cut_pos))
             log2user(string.format(
                 "Cut fragment: %s - EOF",
-                timestamp(capture.shift)))
+                timestamp(cut_pos)))
             mp.commandv("osd-bar", "show_progress")
         end
-        capture.shift = nil
+        cut_pos = nil
     else
         log2user("Start position was't marked")
     end
 end
 
-function crop()
+function render_crop_rect()
+    ass = assdraw.ass_new()
+    ass:draw_start()
+    ass:append(string.format("{\\1a&H%X&}", CROP_ALPHA))
+    -- NOTE: This function doesn't mind if x1 > x2.
+    ass:rect_cw(crop_x1, crop_y1, crop_x2, crop_y2)
+    ass:pos(0, 0)
+    ass:draw_stop()
+    mp.set_osd_ass(width, height, ass.text)
+end
+
+function clear_scr()
+    mp.set_osd_ass(width, height, "")
+end
+
+function crop_drag_start()
     local x, y = mp.get_mouse_pos()
-    -- mouse pos returned by mpv are scaled so we fix them.
-    local resX, resY = mp.get_osd_resolution()
-    local sw = mp.get_property_number("width") / resX
-    local sh = mp.get_property_number("height") / resY
-    x = math.floor(x * sw)
-    y = math.floor(y * sh)
-    if capture.pos1 then
-        local x1, y1 = capture.pos1[1], capture.pos1[2]
-        local cropw = math.abs(x - x1)
-        local croph = math.abs(y - y1)
-        local cropx = math.min(x, x1)
-        local cropy = math.min(y, y1)
-        if cropw == 0 or croph == 0 then
-            log2user("Crop region is empty")
+    if crop_active then
+        if math.min(crop_x1, crop_x2) <= x and
+                math.min(crop_y1, crop_y2) <= y then
+            crop_moving = true
+            move_x, move_y = x, y
         else
-            log2webm(string.format(
-                "crop=%d:%d:%d:%d",
-                cropw, croph, cropx, cropy))
-            log2user(string.format(
-                "Defined crop area as x1=%d, y1=%d, width=%d, height=%d",
-                cropx, cropy, cropw, croph))
+            crop_resizing = true
+            crop_x1, crop_y1 = x, y
+            crop_x2, crop_y2 = x, y
         end
-        capture.pos1 = nil
     else
-        capture.pos1 = {x, y}
-        log2user(string.format(
-            "Marked %d:%d as first edge of crop area",
-            x, y))
+        -- Reinit values on each new crop.
+        crop_active = true
+        local dwidth = mp.get_property_number("dwidth")
+        local dheight = mp.get_property_number("dheight")
+        -- Get scale factor.
+        local res_x, res_y = mp.get_osd_resolution()
+        sw = dwidth / res_x
+        sh = dheight / res_y
+        -- Scale resolution.
+        width = dwidth / sw
+        height = dheight / sh
+
+        -- Start resizing by default.
+        crop_resizing = true
+        crop_x1, crop_y1 = x, y
+        crop_x2, crop_y2 = x, y
     end
 end
 
-mp.add_key_binding("a", "webm_cut", cut)
+function crop_drag_end()
+    crop_resizing = false
+    crop_moving = false
+end
+
+function crop_drag()
+    if crop_resizing then
+        crop_x2, crop_y2 = mp.get_mouse_pos()
+        if crop_x2 < 0 then crop_x2 = 0 end
+        if crop_x2 >= width then crop_x2 = width end
+        if crop_y2 < 0 then crop_y2 = 0 end
+        if crop_y2 >= height then crop_y2 = height end
+        render_crop_rect()
+    elseif crop_moving then
+        x, y = mp.get_mouse_pos()
+        local delta_x, delta_y = x - move_x, y - move_y
+        move_x, move_y = x, y
+        if math.min(crop_x1, crop_x2) + delta_x >= 0 and
+                math.max(crop_x1, crop_x2) + delta_x <= width then
+            crop_x1 = crop_x1 + delta_x
+            crop_x2 = crop_x2 + delta_x
+        end
+        if math.min(crop_y1, crop_y2) + delta_y >= 0 and
+                math.max(crop_y1, crop_y2) + delta_y <= height then
+            crop_y1 = crop_y1 + delta_y
+            crop_y2 = crop_y2 + delta_y
+        end
+        render_crop_rect()
+    end
+end
+
+function crop()
+    if not crop_active then
+        log2user("Crop region is empty")
+        return
+    end
+    local crop_x = math.floor(sw * math.min(crop_x1, crop_x2))
+    local crop_y = math.floor(sh * math.min(crop_y1, crop_y2))
+    local crop_w = math.floor(sw * math.abs(crop_x2 - crop_x1))
+    local crop_h = math.floor(sh * math.abs(crop_y2 - crop_y1))
+    if crop_w == 0 or crop_h == 0 then
+        log2user("Crop region is empty")
+    else
+        log2webm(string.format(
+            "crop=%d:%d:%d:%d",
+            crop_w, crop_h, crop_x, crop_y))
+        log2user(string.format(
+            "Defined crop area as x1=%d, y1=%d, width=%d, height=%d",
+            crop_x, crop_y, crop_w, crop_h))
+    end
+    clear_scr()
+    crop_active = false
+end
+
+function crop_width_dec()
+    if crop_active then
+        crop_x2 = crop_x2 - CROP_X_STEP
+        if crop_x2 < 0 then crop_x2 = 0 end
+        render_crop_rect()
+    end
+end
+
+function crop_width_inc()
+    if crop_active then
+        crop_x2 = crop_x2 + CROP_X_STEP
+        if crop_x2 > width then crop_x2 = width end
+        render_crop_rect()
+    end
+end
+
+function crop_height_dec()
+    if crop_active then
+        crop_y2 = crop_y2 - CROP_Y_STEP
+        if crop_y2 < 0 then crop_y2 = 0 end
+        render_crop_rect()
+    end
+end
+
+function crop_height_inc()
+    if crop_active then
+        crop_y2 = crop_y2 + CROP_Y_STEP
+        if crop_y2 > height then crop_y2 = height end
+        render_crop_rect()
+    end
+end
+
+function crop_x_dec()
+    if crop_active and math.min(crop_x1, crop_x2) >= CROP_X_STEP then
+        crop_x1 = crop_x1 - CROP_X_STEP
+        crop_x2 = crop_x2 - CROP_X_STEP
+        render_crop_rect()
+    end
+end
+
+function crop_x_inc()
+    if crop_active and math.max(crop_x1, crop_x2) <= width - CROP_X_STEP then
+        crop_x1 = crop_x1 + CROP_X_STEP
+        crop_x2 = crop_x2 + CROP_X_STEP
+        render_crop_rect()
+    end
+end
+
+function crop_y_dec()
+    if crop_active and math.min(crop_y1, crop_y2) >= CROP_Y_STEP then
+        crop_y1 = crop_y1 - CROP_Y_STEP
+        crop_y2 = crop_y2 - CROP_Y_STEP
+        render_crop_rect()
+    end
+end
+
+function crop_y_inc()
+    if crop_active and math.max(crop_y1, crop_y2) <= height - CROP_Y_STEP then
+        crop_y1 = crop_y1 + CROP_Y_STEP
+        crop_y2 = crop_y2 + CROP_Y_STEP
+        render_crop_rect()
+    end
+end
+
+mp.add_key_binding("c", "webm_cut", cut)
 mp.add_key_binding("KP1", "webm_cut_from_start", cut_from_start)
 mp.add_key_binding("KP3", "webm_cut_to_end", cut_to_end)
-mp.add_key_binding("c", "webm_crop", crop)
+
+-- XXX: Don't know how to make `mp.add_key_binding` work with dragging.
+mp.set_key_bindings({{"mouse_btn0", crop_drag_end, crop_drag_start}}, "webm")
+mp.enable_key_bindings("webm")
+local rp = {repeatable = true}
+mp.add_key_binding("mouse_move", "webm_crop_drag", crop_drag, rp)
+mp.add_key_binding("KP7", "webm_cropw_dec", crop_width_dec, rp)
+mp.add_key_binding("KP9", "webm_cropw_inc", crop_width_inc, rp)
+mp.add_key_binding("-", "webm_croph_dec", crop_height_dec, rp)
+mp.add_key_binding("+", "webm_croph_inc", crop_height_inc, rp)
+mp.add_key_binding("KP4", "webm_cropx_dec", crop_x_dec, rp)
+mp.add_key_binding("KP6", "webm_cropx_inc", crop_x_inc, rp)
+mp.add_key_binding("KP8", "webm_cropy_dec", crop_y_dec, rp)
+mp.add_key_binding("KP2", "webm_cropy_inc", crop_y_inc, rp)
+mp.add_key_binding("KP_ENTER", "webm_crop", crop, rp)
 """
 
 
