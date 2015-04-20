@@ -10,12 +10,12 @@ features:
   - allows to select video/audio streams and external audio track
   - can burn subtitles into the video
   - flexible set of options and ability to pass raw flags to FFmpeg
-  - interactive mode to cut/crop input video
+  - interactive mode to cut/crop input video with mpv
 
 dependencies:
   - Python 2.7+ or 3.2+ (using: {pythonv})
   - FFmpeg 2+ compiled with libvpx and libopus (using: {ffmpegv})
-  - mpv 0.8+ compiled with lua support, optional (using: {mpvv})
+  - mpv 0.8+ compiled with Lua support, optional (using: {mpvv})
 
 encoding modes:
   - by default bitrate calculated to fit the output video to limit
@@ -456,7 +456,7 @@ def _parse_time(time):
 
 def _get_mpv_log_prefix(path):
     """
-    Analog of ``script_name_from_filename`` from
+    Analogue of ``script_name_from_filename`` from
     ``mpv/player/scripting.c``
     """
     name = os.path.basename(path)
@@ -466,10 +466,10 @@ def _get_mpv_log_prefix(path):
 
 
 def run_interactive_mode(options):
-    # NOTE: mpv ignores lua scripts without suffix.
+    # NOTE: mpv ignores Lua scripts without suffix.
     luafh, luafile = tempfile.mkstemp(suffix='.lua')
+    options.luafile = luafile
     try:
-        options.luafile = luafile
         os.write(luafh, MPV_SCRIPT)
     finally:
         os.close(luafh)
