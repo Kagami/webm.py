@@ -130,21 +130,21 @@ def _ffmpeg_output(args, check_code=True, debug=False):
     return {'stdout': out, 'stderr': err, 'code': p.returncode}
 
 
-def _mpv_output(args, check_code=True, catch_stderr=True, debug=False):
+def _mpv_output(args, check_code=True, catch_stdout=True, debug=False):
     args = [MPV_PATH] + args
     if debug:
         print('='*50 + '\n' + ' '.join(args) + '\n' + '='*50, file=sys.stderr)
-    kwargs = {'stderr': subprocess.PIPE} if catch_stderr else {}
+    kwargs = {'stdout': subprocess.PIPE} if catch_stdout else {}
     try:
-        p = subprocess.Popen(args, stdout=subprocess.PIPE, **kwargs)
+        p = subprocess.Popen(args, stderr=subprocess.PIPE, **kwargs)
     except Exception as exc:
         raise Exception('Failed to run mpv ({})'.format(exc))
     out, err = p.communicate()
     if check_code and p.returncode != 0:
         raise Exception('FFmpeg exited with error')
-    out = out.decode(OS_ENCODING)
-    if catch_stderr:
-        err = err.decode(OS_ENCODING)
+    if catch_stdout:
+        out = out.decode(OS_ENCODING)
+    err = err.decode(OS_ENCODING)
     return {'stdout': out, 'stderr': err, 'code': p.returncode}
 
 
@@ -454,15 +454,29 @@ def _parse_time(time):
     return duration
 
 
+def _get_mpv_log_prefix(path):
+    """
+    Analog of ``script_name_from_filename`` from
+    ``mpv/player/scripting.c``
+    """
+    name = os.path.basename(path)
+    name = os.path.splitext(name)[0]
+    name = re.sub(r'[^A-Za-z0-9]', '_', name)
+    return name
+
+
 def run_interactive_mode(options):
-    # NOTE: mpv ignores lua script without suffix.
+    # NOTE: mpv ignores lua scripts without suffix.
     luafh, luafile = tempfile.mkstemp(suffix='.lua')
     try:
         options.luafile = luafile
         os.write(luafh, MPV_SCRIPT)
     finally:
         os.close(luafh)
-    args = ['--script', luafile, '--msg-level', 'all=no']
+
+    args = ['--script', luafile]
+    script_log_prefix = _get_mpv_log_prefix(luafile)
+    args += ['--msg-level', 'all=no,{}=warn'.format(script_log_prefix)]
     if options.poo is not None:
         args += options.poo.split()
     args += [options.infile]
@@ -474,17 +488,19 @@ def run_interactive_mode(options):
           'the start to the marked time', file=sys.stderr)
     print('Press "KP2" after "a" to define the fragment from '
           'the marked time to the end of the video', file=sys.stderr)
-    print('Move mouse cursor to the first point of crop rectangle '
-          'and press "c", move cursor to the opposite point and '
+    print('Move mouse cursor to the first edge of crop area '
+          'and press "c", move cursor to the opposite edge and '
           'press "c" again to define the crop region', file=sys.stderr)
 
     # We let the user to see stderr output and catch stdout by ourself.
-    out = _mpv_output(args, debug=True, catch_stderr=False)['stdout']
+    out = _mpv_output(args, debug=True, catch_stdout=False)['stderr']
     cut = None
     crop = None
     for line in reversed(out.split()):
         if not cut:
-            cutm = re.match(r'cut=(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)$', line)
+            cutm = re.match(
+                r'cut=(-1|\d+(?:\.\d+)?):(-1|\d+(?:\.\d+)?)$',
+                line)
             if cutm:
                 cut = cutm.groups()
                 if crop:
@@ -497,10 +513,14 @@ def run_interactive_mode(options):
                 if cut:
                     break
 
+    # NOTE: We don't mind checking cut ranges and crop values because:
+    # 1) It should be already checked in Lua script
+    # 2) We will check some of them anyway in ``_get_durations``
     print('='*50, file=sys.stderr)
     if cut:
-        shift = _timestamp(float(cut[0]))
-        endpos = _timestamp(float(cut[1]))
+        # ``-1`` is a special value and defines start/end of the file.
+        shift = _timestamp(0 if cut[0] == '-1' else float(cut[0]))
+        endpos = 'EOF' if cut[1] == '-1' else _timestamp(float(cut[1]))
         print('[CUT] Start time: {}, end time: {}'.format(shift, endpos),
               file=sys.stderr)
     if crop:
@@ -515,20 +535,22 @@ def run_interactive_mode(options):
             sys.exit(1)
         if ok == '' or ok.lower() == 'y':
             if cut:
-                options.ss = cut[0]
-                options.to = cut[1]
+                if cut[0] != '-1':
+                    options.ss = cut[0]
+                if cut[1] != '-1':
+                    options.to = cut[1]
             if crop:
                 options.vfi = crop[0] if options.vfi is None \
                     else '{},{}'.format(options.vfi, crop[0])
         else:
             sys.exit(1)
     else:
+        print("You haven't chosen neither cut nor crop.", file=sys.stderr)
         try:
-            print("You haven't chosen neither cut nor crop.", file=sys.stderr)
             ok = input('Encode input video intact? y/N ')
         except EOFError:
             sys.exit(1)
-        if ok == '' or ok.lower() == 'n':
+        if ok == '' or ok.lower() != 'y':
             sys.exit(1)
 
 
@@ -832,62 +854,104 @@ def main():
 
 MPV_SCRIPT = br"""
 capture = {}
-function log(str)
+
+function log2user(str)
     io.stdout:write(str .. "\n")
+end
+
+function log2webm(str)
     io.stderr:write(str .. "\n")
 end
+
 function cut()
-    local pos = mp.get_property("time-pos")
-    if capture.shift then
+    local pos = mp.get_property_number("time-pos")
+    if capture.shift ~= nil then
         local shift, endpos = capture.shift, pos
         if shift > endpos then
             shift, endpos = endpos, shift
         end
-        log(string.format("cut=%f:%f", shift, endpos))
+        if shift == endpos then
+            log2user("Cut fragment is empty")
+        else
+            log2webm(string.format("cut=%f:%f", shift, endpos))
+            log2user(string.format(
+                "Defined cut fragment as start time: %f, end time: %f",
+                shift, endpos))
+        end
         capture.shift = nil
     else
         capture.shift = pos
-        log(string.format("Marked %f as start position", pos))
+        log2user(string.format("Marked %f as start position", pos))
     end
 end
+
 function cut_from_start()
-    if capture.shift then
-        log(string.format("cut=0:%f", capture.shift))
+    -- NOTE: 0 is truly value in Lua...
+    if capture.shift ~= nil then
+        if capture.shift == 0 then
+            log2user("Cut fragment is empty")
+        else
+            log2webm(string.format("cut=-1:%f", capture.shift))
+            log2user(string.format(
+                "Defined cut fragment as start time: 0, end time: %f",
+                capture.shift))
+        end
         capture.shift = nil
     else
-        log("End position was't marked")
+        log2user("End position was't marked")
     end
 end
+
 function cut_to_end()
-    if capture.shift then
-        local endpos = mp.get_property("length")
-        log(string.format("cut=%f:%f", capture.shift, endpos))
+    if capture.shift ~= nil then
+        local endpos = mp.get_property_number("length")
+        if capture.shift == endpos then
+            log2user("Cut fragment is empty")
+        else
+            log2webm(string.format("cut=%f:-1", capture.shift))
+            log2user(string.format(
+                "Defined cut fragment as start time: %f, end time: EOF",
+                capture.shift))
+        end
         capture.shift = nil
     else
-        log("Start position was't marked")
+        log2user("Start position was't marked")
     end
 end
+
 function crop()
     local x, y = mp.get_mouse_pos()
     -- mouse pos returned by mpv are scaled so we fix them.
     local resX, resY = mp.get_osd_resolution()
-    local sw = mp.get_property("width") / resX
-    local sh = mp.get_property("height") / resY
-    x = x * sw
-    y = y * sh
+    local sw = mp.get_property_number("width") / resX
+    local sh = mp.get_property_number("height") / resY
+    x = math.floor(x * sw)
+    y = math.floor(y * sh)
     if capture.pos1 then
         local x1, y1 = capture.pos1[1], capture.pos1[2]
         local cropw = math.abs(x - x1)
         local croph = math.abs(y - y1)
         local cropx = math.min(x, x1)
         local cropy = math.min(y, y1)
-        log(string.format("crop=%d:%d:%d:%d", cropw, croph, cropx, cropy))
+        if cropw == 0 or croph == 0 then
+            log2user("Crop region is empty")
+        else
+            log2webm(string.format(
+                "crop=%d:%d:%d:%d",
+                cropw, croph, cropx, cropy))
+            log2user(string.format(
+                "Defined crop area as x1=%d, y1=%d, width=%d, height=%d",
+                cropx, cropy, cropw, croph))
+        end
         capture.pos1 = nil
     else
         capture.pos1 = {x, y}
-        log(string.format("Marked %d:%d as top left edge", x, y))
+        log2user(string.format(
+            "Marked %d:%d as first edge of crop area",
+            x, y))
     end
 end
+
 mp.add_key_binding("a", "cut", cut)
 mp.add_key_binding("KP1", "cut_from_start", cut_from_start)
 mp.add_key_binding("KP2", "cut_to_end", cut_to_end)
