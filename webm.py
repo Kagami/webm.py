@@ -151,7 +151,10 @@ def _mpv_output(args, check_code=True, catch_stdout=True, debug=False):
 def check_dependencies():
     pythonv = '{}.{}.{}'.format(*sys.version_info)
     if ((sys.version_info[0] == 2 and sys.version_info[1] < 7) or
-            (sys.version_info[0] == 3 and sys.version_info[1] < 2)):
+            (sys.version_info[0] == 3 and sys.version_info[1] < 2) or
+            # Just in case... Also don't restrict <= 3, script may
+            # probably work on Python 4+ too.
+            sys.version_info[0] < 2):
         raise Exception(
             'Python version must be 2.7+ or 3.2+, using: {}'.format(pythonv))
 
