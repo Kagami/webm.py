@@ -141,7 +141,7 @@ def _mpv_output(args, check_code=True, catch_stdout=True, debug=False):
         raise Exception('Failed to run mpv ({})'.format(exc))
     out, err = p.communicate()
     if check_code and p.returncode != 0:
-        raise Exception('FFmpeg exited with error')
+        raise Exception('mpv exited with error')
     if catch_stdout:
         out = out.decode(OS_ENCODING)
     err = err.decode(OS_ENCODING)
