@@ -872,11 +872,18 @@ def main():
 
 
 MPV_SCRIPT = br"""
+require "mp.options"
 local assdraw = require "mp.assdraw"
 
-local CROP_ALPHA = 180
-local CROP_X_STEP = 2
-local CROP_Y_STEP = 2
+local options = {
+    crop_alpha = 180,
+    crop_x_step = 2,
+    crop_y_step = 2,
+}
+read_options(options, "webm")
+local crop_alpha = options.crop_alpha
+local crop_x_step = options.crop_x_step
+local crop_y_step = options.crop_y_step
 
 local cut_pos = nil
 local crop_active = false
@@ -975,7 +982,7 @@ end
 function render_crop_rect()
     ass = assdraw.ass_new()
     ass:draw_start()
-    ass:append(string.format("{\\1a&H%X&}", CROP_ALPHA))
+    ass:append(string.format("{\\1a&H%X&}", crop_alpha))
     -- NOTE: This function doesn't mind if x1 > x2.
     ass:rect_cw(crop_x1, crop_y1, crop_x2, crop_y2)
     ass:pos(0, 0)
@@ -1078,7 +1085,7 @@ end
 
 function crop_width_dec()
     if crop_active then
-        crop_x2 = crop_x2 - CROP_X_STEP
+        crop_x2 = crop_x2 - crop_x_step
         if crop_x2 < 0 then crop_x2 = 0 end
         render_crop_rect()
     end
@@ -1086,7 +1093,7 @@ end
 
 function crop_width_inc()
     if crop_active then
-        crop_x2 = crop_x2 + CROP_X_STEP
+        crop_x2 = crop_x2 + crop_x_step
         if crop_x2 > width then crop_x2 = width end
         render_crop_rect()
     end
@@ -1094,7 +1101,7 @@ end
 
 function crop_height_dec()
     if crop_active then
-        crop_y2 = crop_y2 - CROP_Y_STEP
+        crop_y2 = crop_y2 - crop_y_step
         if crop_y2 < 0 then crop_y2 = 0 end
         render_crop_rect()
     end
@@ -1102,40 +1109,40 @@ end
 
 function crop_height_inc()
     if crop_active then
-        crop_y2 = crop_y2 + CROP_Y_STEP
+        crop_y2 = crop_y2 + crop_y_step
         if crop_y2 > height then crop_y2 = height end
         render_crop_rect()
     end
 end
 
 function crop_x_dec()
-    if crop_active and math.min(crop_x1, crop_x2) >= CROP_X_STEP then
-        crop_x1 = crop_x1 - CROP_X_STEP
-        crop_x2 = crop_x2 - CROP_X_STEP
+    if crop_active and math.min(crop_x1, crop_x2) >= crop_x_step then
+        crop_x1 = crop_x1 - crop_x_step
+        crop_x2 = crop_x2 - crop_x_step
         render_crop_rect()
     end
 end
 
 function crop_x_inc()
-    if crop_active and math.max(crop_x1, crop_x2) <= width - CROP_X_STEP then
-        crop_x1 = crop_x1 + CROP_X_STEP
-        crop_x2 = crop_x2 + CROP_X_STEP
+    if crop_active and math.max(crop_x1, crop_x2) <= width - crop_x_step then
+        crop_x1 = crop_x1 + crop_x_step
+        crop_x2 = crop_x2 + crop_x_step
         render_crop_rect()
     end
 end
 
 function crop_y_dec()
-    if crop_active and math.min(crop_y1, crop_y2) >= CROP_Y_STEP then
-        crop_y1 = crop_y1 - CROP_Y_STEP
-        crop_y2 = crop_y2 - CROP_Y_STEP
+    if crop_active and math.min(crop_y1, crop_y2) >= crop_y_step then
+        crop_y1 = crop_y1 - crop_y_step
+        crop_y2 = crop_y2 - crop_y_step
         render_crop_rect()
     end
 end
 
 function crop_y_inc()
-    if crop_active and math.max(crop_y1, crop_y2) <= height - CROP_Y_STEP then
-        crop_y1 = crop_y1 + CROP_Y_STEP
-        crop_y2 = crop_y2 + CROP_Y_STEP
+    if crop_active and math.max(crop_y1, crop_y2) <= height - crop_y_step then
+        crop_y1 = crop_y1 + crop_y_step
+        crop_y2 = crop_y2 + crop_y_step
         render_crop_rect()
     end
 end
