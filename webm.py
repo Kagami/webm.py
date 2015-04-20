@@ -882,7 +882,6 @@ end
 
 function cut()
     local pos = mp.get_property_number("time-pos")
-    print(mp.get_property_osd("time-pos"))
     if capture.shift ~= nil then
         local shift, endpos = capture.shift, pos
         if shift > endpos then
@@ -973,10 +972,10 @@ function crop()
     end
 end
 
-mp.add_key_binding("a", "cut", cut)
-mp.add_key_binding("KP1", "cut_from_start", cut_from_start)
-mp.add_key_binding("KP2", "cut_to_end", cut_to_end)
-mp.add_key_binding("c", "crop", crop)
+mp.add_key_binding("a", "webm_cut", cut)
+mp.add_key_binding("KP1", "webm_cut_from_start", cut_from_start)
+mp.add_key_binding("KP2", "webm_cut_to_end", cut_to_end)
+mp.add_key_binding("c", "webm_crop", crop)
 """
 
 
