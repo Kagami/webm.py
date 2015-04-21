@@ -506,8 +506,8 @@ def run_interactive_mode(options):
     """
     # NOTE: mpv ignores Lua scripts without suffix.
     luafh, luafile = tempfile.mkstemp(suffix='.lua')
-    options.luafile = luafile
     try:
+        options.luafile = luafile
         os.write(luafh, MPV_SCRIPT)
     finally:
         os.close(luafh)
@@ -803,7 +803,8 @@ def encode(options):
     if options.vb is None:
         options.vb = _calc_video_bitrate(options)
     options.threads = multiprocessing.cpu_count()
-    options.logfile = tempfile.mkstemp(suffix='-0.log')[1]
+    logfh, options.logfile = tempfile.mkstemp(suffix='-0.log')
+    os.close(logfh)
     _encode(options, firstpass=True)
     _encode(options, firstpass=False)
 
