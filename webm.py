@@ -5,8 +5,8 @@ convert videos to webm format using FFmpeg
 
 features:
   - encodes input video to webm container with VP9 and Opus
-  - uses two-pass encode with the settings recommended by the developers
-  - fits output file to the given size limit
+  - uses 2-pass encoding with the settings recommended by the developers
+  - fits output file to the size limit by default
   - allows to select video/audio streams and external audio track
   - can burn subtitles into the video
   - flexible set of options and ability to pass raw flags to FFmpeg

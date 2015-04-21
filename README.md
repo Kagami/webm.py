@@ -1,6 +1,16 @@
 # webm.py
 
-Just another bikeshed to encode webm VP9 videos. Nothing interesting here.
+Yet another bikeshed to encode webm videos with CLI.
+
+## Features
+
+* Encodes input video to webm container with VP9 and Opus
+* Uses 2-pass encoding with the [settings](http://wiki.webmproject.org/ffmpeg/vp9-encoding-guide) recommended by the developers
+* Fits output file to the size limit by default
+* Allows to select video/audio streams and external audio track
+* Can burn subtitles into the video
+* Flexible set of options and ability to pass raw flags to FFmpeg
+* Interactive mode to cut/crop input video with mpv
 
 ## Requirements
 
@@ -29,6 +39,8 @@ Or with pip:
 ## Usage
 
 **NOTE:** Windows users may want to add Python executable to the `PATH`. See <https://docs.python.org/3/using/windows.html#excursus-setting-environment-variables> for details. Otherwise just type the full path to your `python.exe` location instead of `python`.
+
+Use `webm` instead of `python webm.py` if you installed it from pip.
 
 Show help:
 ```bash
