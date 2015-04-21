@@ -24,7 +24,7 @@ encoding modes:
   - -crf and -vb 0 enable constant quality mode
 
 examples:
-  (use `{stitle}' instead of `python {title}' if you installed it from pip)
+  (use `{stitle}' instead of `python {title}' if you installed it with pip)
   - fit video to default limit: python {title} -i in.mkv
   - fit video to 6 MiB:         python {title} -i in.mkv -l 6
   - set video bitrate to 600k:  python {title} -i in.mkv -vb 600

@@ -1,6 +1,6 @@
 # webm.py
 
-Yet another bikeshed to encode webm videos with CLI.
+Yet another bikeshed to encode webm videos from CLI.
 
 ## Features
 
@@ -39,7 +39,7 @@ Or with pip:
 
 **NOTE:** Windows users may want to add Python executable to the `PATH`. See <https://docs.python.org/3/using/windows.html#excursus-setting-environment-variables> for details. Otherwise just type the full path to your `python.exe` location instead of `python`.
 
-Use `webm` instead of `python webm.py` if you installed it from pip.
+Use `webm` instead of `python webm.py` if you installed it with pip.
 
 Show help:
 ```bash
