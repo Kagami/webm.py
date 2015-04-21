@@ -10,7 +10,7 @@ Yet another bikeshed to encode webm videos with CLI.
 * Allows to select video/audio streams and external audio track
 * Can burn subtitles into the video
 * Flexible set of options and ability to pass raw flags to FFmpeg
-* Interactive mode to cut/crop input video with mpv
+* [Interactive mode](#interactive-mode) to cut/crop input video with mpv
 
 ## Requirements
 
@@ -28,7 +28,6 @@ mkdir -p ~/.local/bin
 wget https://raw.githubusercontent.com/Kagami/webm.py/master/webm.py -O ~/.local/bin/webm
 chmod +x ~/.local/bin/webm
 export PATH=$PATH:~/.local/bin
-webm -h
 ```
 
 Or with pip:

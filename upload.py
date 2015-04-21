@@ -8,10 +8,7 @@ All credit goes to <https://coderwall.com/p/qawuyq>.
 import os
 import sys
 
-import pandoc
-
-
-pandoc.core.PANDOC_PATH = 'pandoc'
+import pypandoc
 
 
 def main():
@@ -21,13 +18,12 @@ def main():
     # contain non-ascii encoded string and python will complain.
     if '-u' in sys.argv[1:]:
         cmd += ' upload'
-    doc = pandoc.Document()
-    # NOTE: pyandoc accepts bytes and returns bytes. Also it doesn't
-    # work with Py3.
-    doc.markdown = open('README.md', 'rb').read()
-    f = open('README.rst', 'wb')
-    f.write(doc.rst)
-    f.close()
+    output = pypandoc.convert(
+        source='README.md',
+        format='markdown_github',
+        to='rst',
+        outputfile='README.rst')
+    assert output == ''
     os.system(cmd)
 
 
