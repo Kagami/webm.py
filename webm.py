@@ -57,6 +57,7 @@ import re
 import sys
 import math
 import time
+import shlex
 import locale
 import tempfile
 import traceback
@@ -520,7 +521,7 @@ def run_interactive_mode(options):
         # mpv subtitle indexes start with 1.
         args += ['--sid', _TEXT_TYPE(options.si + 1)]
     if options.poo is not None:
-        args += options.poo.split()
+        args += shlex.split(options.poo)
     args += [options.infile]
     print(_doc_to_help(run_interactive_mode.__doc__), file=sys.stderr)
 
@@ -712,7 +713,7 @@ def _encode(options, firstpass):
     if options.ss is not None:
         args += ['-ss', options.ss]
     if options.ooi is not None:
-        args += options.ooi.split()
+        args += shlex.split(options.ooi)
     args += ['-i', options.infile]
     if options.aa is not None:
         args += ['-i', options.aa]
@@ -789,7 +790,7 @@ def _encode(options, firstpass):
 
     # Misc.
     if options.oo is not None:
-        args += options.oo.split()
+        args += shlex.split(options.oo)
 
     # Output.
     args += ['-f', 'webm', '-y', outfile]
