@@ -899,7 +899,8 @@ local sw, sh = 0, 0
 local width, height = 0, 0
 -- x2 can be less than x1, y2 can be less than y1.
 local crop_x1, crop_y1, crop_x2, crop_y2 = 0, 0, 0, 0
-local move_x, move_y = 0, 0
+local move_base_x, move_base_y = 0, 0
+local move_start_x1, move_start_y1 = 0, 0
 
 function log2user(str)
     io.stdout:write(str .. "\n")
@@ -1006,7 +1007,8 @@ function crop_drag_start()
                 x <= math.max(crop_x1, crop_x2) and
                 y <= math.max(crop_y1, crop_y2) then
             crop_moving = true
-            move_x, move_y = x, y
+            move_base_x, move_base_y = x, y
+            move_start_x1, move_start_y1 = crop_x1, crop_y1
         else
             crop_resizing = true
             crop_x1, crop_y1 = x, y
@@ -1019,6 +1021,8 @@ function crop_drag_start()
         local dwidth = mp.get_property_number("dwidth")
         local dheight = mp.get_property_number("dheight")
         -- Get scale factor.
+        -- NOTE: This probably may work incorrectly if user resized mpv
+        -- window or for some other obscure use cases. Please report it.
         local res_x, res_y = mp.get_osd_resolution()
         sw = dwidth / res_x
         sh = dheight / res_y
@@ -1038,30 +1042,68 @@ function crop_drag_end()
     crop_moving = false
 end
 
+function ensure_ranges()
+    local cropw = math.abs(crop_x2 - crop_x1)
+    if crop_x1 < crop_x2 then
+        if crop_x1 < 0 then
+            crop_x1 = 0
+            crop_x2 = cropw
+        elseif crop_x2 > width then
+            crop_x1 = width - cropw
+            crop_x2 = width
+        end
+    else
+        if crop_x2 < 0 then
+            crop_x2 = 0
+            crop_x1 = cropw
+        elseif crop_x1 > width then
+            crop_x2 = width - cropw
+            crop_x1 = width
+        end
+    end
+    local croph = math.abs(crop_y2 - crop_y1)
+    if crop_y1 < crop_y2 then
+        if crop_y1 < 0 then
+            crop_y1 = 0
+            crop_y2 = croph
+        elseif crop_y2 > height then
+            crop_y1 = height - croph
+            crop_y2 = height
+        end
+    else
+        if crop_y2 < 0 then
+            crop_y2 = 0
+            crop_y1 = croph
+        elseif crop_y1 > height then
+            crop_y2 = height - croph
+            crop_y1 = height
+        end
+    end
+end
+
 function crop_drag()
     if crop_resizing then
         crop_x2, crop_y2 = mp.get_mouse_pos()
         if crop_x2 < 0 then crop_x2 = 0 end
-        if crop_x2 >= width then crop_x2 = width end
+        if crop_x2 > width then crop_x2 = width end
         if crop_y2 < 0 then crop_y2 = 0 end
-        if crop_y2 >= height then crop_y2 = height end
+        if crop_y2 > height then crop_y2 = height end
         render_crop_rect()
     elseif crop_moving then
-        x, y = mp.get_mouse_pos()
-        local delta_x, delta_y = x - move_x, y - move_y
-        move_x, move_y = x, y
-        if math.min(crop_x1, crop_x2) + delta_x >= 0 and
-                math.max(crop_x1, crop_x2) + delta_x <= width then
-            crop_x1 = crop_x1 + delta_x
-            crop_x2 = crop_x2 + delta_x
-        end
-        if math.min(crop_y1, crop_y2) + delta_y >= 0 and
-                math.max(crop_y1, crop_y2) + delta_y <= height then
-            crop_y1 = crop_y1 + delta_y
-            crop_y2 = crop_y2 + delta_y
-        end
+        local x, y = mp.get_mouse_pos()
+        local delta_x, delta_y = x - move_base_x, y - move_base_y
+        local crop_w, crop_h = crop_x2 - crop_x1, crop_y2 - crop_y1
+        crop_x1 = move_start_x1 + delta_x
+        crop_x2 = crop_x1 + crop_w
+        crop_y1 = move_start_y1 + delta_y
+        crop_y2 = crop_y1 + crop_h
+        ensure_ranges()
         render_crop_rect()
     end
+end
+
+function round(x)
+    return math.floor(x + 0.5)
 end
 
 function crop()
@@ -1069,10 +1111,14 @@ function crop()
         log2user("Crop region is empty")
         return
     end
-    local crop_x = math.floor(sw * math.min(crop_x1, crop_x2))
-    local crop_y = math.floor(sh * math.min(crop_y1, crop_y2))
-    local crop_w = math.floor(sw * math.abs(crop_x2 - crop_x1))
-    local crop_h = math.floor(sh * math.abs(crop_y2 - crop_y1))
+    -- Fix floating point inaccuracy with round (because in mpv's
+    -- gorgeous API mouse coords are floating, sw/sh are floating, etc).
+    -- E.g. sw=2.499999 * cropw=512 should give 1280 as well as
+    --      sw=2.5      * cropw=512.0001
+    local crop_x = round(sw * math.min(crop_x1, crop_x2))
+    local crop_y = round(sh * math.min(crop_y1, crop_y2))
+    local crop_w = round(sw * math.abs(crop_x2 - crop_x1))
+    local crop_h = round(sh * math.abs(crop_y2 - crop_y1))
     if crop_w == 0 or crop_h == 0 then
         log2user("Crop region is empty")
     else
@@ -1120,33 +1166,37 @@ function crop_height_inc()
 end
 
 function crop_x_dec()
-    if crop_active and math.min(crop_x1, crop_x2) >= crop_x_step then
+    if crop_active then
         crop_x1 = crop_x1 - crop_x_step
         crop_x2 = crop_x2 - crop_x_step
+        ensure_ranges()
         render_crop_rect()
     end
 end
 
 function crop_x_inc()
-    if crop_active and math.max(crop_x1, crop_x2) <= width - crop_x_step then
+    if crop_active then
         crop_x1 = crop_x1 + crop_x_step
         crop_x2 = crop_x2 + crop_x_step
+        ensure_ranges()
         render_crop_rect()
     end
 end
 
 function crop_y_dec()
-    if crop_active and math.min(crop_y1, crop_y2) >= crop_y_step then
+    if crop_active then
         crop_y1 = crop_y1 - crop_y_step
         crop_y2 = crop_y2 - crop_y_step
+        ensure_ranges()
         render_crop_rect()
     end
 end
 
 function crop_y_inc()
-    if crop_active and math.max(crop_y1, crop_y2) <= height - crop_y_step then
+    if crop_active then
         crop_y1 = crop_y1 + crop_y_step
         crop_y2 = crop_y2 + crop_y_step
+        ensure_ranges()
         render_crop_rect()
     end
 end
