@@ -5,6 +5,12 @@ from setuptools import setup
 from webm import __version__
 
 
+try:
+    long_description = open('README.rst', 'rb').read().decode('utf-8')
+except Exception:
+    long_description = ''
+
+
 setup(
     # Reference: <http://pythonhosted.org/distribute/setuptools.html>.
     name='webm',
@@ -13,6 +19,7 @@ setup(
     author_email='kagami@genshiken.org',
     url='https://github.com/Kagami/webm.py',
     description='Encode webm videos',
+    long_description=long_description,
     license='CC0',
     py_modules=['webm'],
     entry_points={

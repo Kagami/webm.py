@@ -4,4 +4,5 @@
 *.pyc
 /.venv/
 
+/README.rst
 *.webm
