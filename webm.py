@@ -675,23 +675,13 @@ def _get_output_filename(options):
     return name
 
 
-def _round(x, d=0):
-    """
-    round function from Python2. See
-    <http://python3porting.com/differences.html#rounding-behavior> for
-    details.
-    """
-    p = 10 ** d
-    return float(math.floor((x * p) + math.copysign(0.5, x)))/p
-
-
 def _calc_video_bitrate(options):
     if options.tt is not None or options.tot is not None:
         outduration = options.foutduration
     else:
         outduration = options.outduration
     # mebibytes * 1024 * 8 = kbits
-    bitrate = int(_round(options.l * 8192 / outduration - options.ab))
+    bitrate = int(math.floor(options.l * 8192 / outduration - options.ab))
     if bitrate < 1:
         # Prevent failing to constant/CQ mode because of too low
         # limit/long duration/big audio bitrate.
@@ -826,7 +816,7 @@ def print_stats(options, start):
     if size >= 1024 * 1024:
         sizeinfo += ', {:.2f} MiB'.format(size/1024/1024)
     if options.l is not None:
-        limit = int(_round(options.l * 1024 * 1024))
+        limit = int(math.floor(options.l * 1024 * 1024))
         if size > limit:
             sizeinfo += ', OVERWEIGHT: {} B'.format(size - limit)
         elif size < limit:
