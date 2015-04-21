@@ -201,7 +201,7 @@ def check_dependencies():
                 major, minor, _ = mpvv.split('.', 2)
                 if int(major) == 0 and int(minor) < 8:
                     raise Exception('mpv version must be 0.8+, '
-                                    'using: {}'.format(ffmpegv))
+                                    'using: {}'.format(mpvv))
             else:
                 pass
 
@@ -516,6 +516,9 @@ def run_interactive_mode(options):
     args = ['--no-osc', '--script', luafile]
     script_log_prefix = _get_mpv_log_prefix(luafile)
     args += ['--msg-level', 'all=no,{}=warn'.format(script_log_prefix)]
+    if options.si is not None:
+        # mpv subtitle indexes start with 1.
+        args += ['--sid', _TEXT_TYPE(options.si + 1)]
     if options.poo is not None:
         args += options.poo.split()
     args += [options.infile]
@@ -732,9 +735,8 @@ def _encode(options, firstpass):
 
     # Video.
     args += [
-        '-sn',
         '-pass', passn, '-passlogfile', logfile,
-        '-c:v', 'libvpx-vp9', '-b:v', vb,
+        '-sn', '-c:v', 'libvpx-vp9', '-b:v', vb,
         '-threads', threads, '-speed', speed,
         '-tile-columns', '6', '-frame-parallel', '1',
         '-auto-alt-ref', '1', '-lag-in-frames', '25',
