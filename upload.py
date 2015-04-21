@@ -2,7 +2,7 @@
 
 """
 Auto-generate README in reST format and upload package to PyPI.
-All credits goes to <https://coderwall.com/p/qawuyq>.
+All credit goes to <https://coderwall.com/p/qawuyq>.
 """
 
 import os
@@ -19,9 +19,11 @@ def main():
     if '-u' in sys.argv:
         cmd += ' upload'
     doc = pandoc.Document()
-    doc.markdown = open('README.md').read()
+    # NOTE: pyandoc accepts bytes and return bytes. It doesn't work with
+    # Py3 though.
+    doc.markdown = open('README.md', 'rb').read()
     f = open('README.rst', 'wb')
-    f.write(doc.rst.encode('utf-8'))
+    f.write(doc.rst)
     f.close()
     os.system(cmd)
 
