@@ -466,17 +466,6 @@ def _timestamp(duration):
     return ts
 
 
-def _get_mpv_log_prefix(path):
-    """
-    Analogue of ``script_name_from_filename`` from
-    ``mpv/player/scripting.c``
-    """
-    name = os.path.basename(path)
-    name = os.path.splitext(name)[0]
-    name = re.sub(r'[^A-Za-z0-9]', '_', name)
-    return name
-
-
 def _doc_to_help(doc):
     doc = doc.strip()
     lines = doc.split('\n')
@@ -513,9 +502,7 @@ def run_interactive_mode(options):
         os.close(luafh)
 
     # Disabling OSC since it conflicts with interactive mode.
-    args = ['--no-osc', '--script', luafile]
-    script_log_prefix = _get_mpv_log_prefix(luafile)
-    args += ['--msg-level', 'all=no,{}=warn'.format(script_log_prefix)]
+    args = ['--no-osc', '--msg-level', 'all=error', '--script', luafile]
     if options.si is not None:
         # mpv subtitle indexes start with 1.
         args += ['--sid', _TEXT_TYPE(options.si + 1)]
