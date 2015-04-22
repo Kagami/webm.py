@@ -40,6 +40,9 @@ use custom location of FFmpeg executable:
 
 # TODO:
 #     * Shift audio/subtitles by given amount of time
+#     * Dump audio/subs shift from interactive mode
+#     * Better error reporting in verbose mode
+#     * VP8/Vorbis mode
 #     * Fit audio to limit
 #     * Optionally use mkvmerge for muxing
 #     * Best quality mode
