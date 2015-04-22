@@ -491,6 +491,7 @@ def run_interactive_mode(options):
     KP4/KP8/KP6/KP2 (move crop area left/up/right/down) and
     KP7/KP9/-/+ (decrease/increase width/height).
     Press KP_ENTER when you finished with crop.
+    Also you can press KP5 to init crop area at the center of video.
 
     Once you defined cut fragment and/or crop are, close the
     player and let the script do all hard work for calculating
@@ -984,41 +985,50 @@ function clear_scr()
     mp.set_osd_ass(width, height, "")
 end
 
+function crop_init()
+    crop_active = true
+    local dwidth = mp.get_property_number("dwidth")
+    local dheight = mp.get_property_number("dheight")
+    -- Get scale factor.
+    -- NOTE: This probably may work incorrectly if user resized mpv
+    -- window or for some other obscure use cases. Please report it.
+    local res_x, res_y = mp.get_osd_resolution()
+    sw = dwidth / res_x
+    sh = dheight / res_y
+    -- Scale resolution.
+    width = dwidth / sw
+    height = dheight / sh
+end
+
+function crop_init_at_center()
+    if crop_active then
+        log2user("Crop is already active")
+    else
+        crop_init()
+        crop_x1 = width * 1/4
+        crop_x2 = width * 3/4
+        crop_y1 = height * 1/4
+        crop_y2 = height * 3/4
+        render_crop_rect()
+    end
+end
+
 function crop_drag_start()
     local x, y = mp.get_mouse_pos()
-    if crop_active then
-        if math.min(crop_x1, crop_x2) <= x and
-                math.min(crop_y1, crop_y2) <= y and
-                x <= math.max(crop_x1, crop_x2) and
-                y <= math.max(crop_y1, crop_y2) then
-            crop_moving = true
-            move_base_x, move_base_y = x, y
-            move_start_x1, move_start_y1 = crop_x1, crop_y1
-        else
-            crop_resizing = true
-            crop_x1, crop_y1 = x, y
-            crop_x2, crop_y2 = x, y
-            clear_scr()
-        end
+    if crop_active and
+            math.min(crop_x1, crop_x2) <= x and
+            math.min(crop_y1, crop_y2) <= y and
+            x <= math.max(crop_x1, crop_x2) and
+            y <= math.max(crop_y1, crop_y2) then
+        crop_moving = true
+        move_base_x, move_base_y = x, y
+        move_start_x1, move_start_y1 = crop_x1, crop_y1
     else
-        -- Reinit values on each new crop.
-        crop_active = true
-        local dwidth = mp.get_property_number("dwidth")
-        local dheight = mp.get_property_number("dheight")
-        -- Get scale factor.
-        -- NOTE: This probably may work incorrectly if user resized mpv
-        -- window or for some other obscure use cases. Please report it.
-        local res_x, res_y = mp.get_osd_resolution()
-        sw = dwidth / res_x
-        sh = dheight / res_y
-        -- Scale resolution.
-        width = dwidth / sw
-        height = dheight / sh
-
-        -- Start resizing by default.
+        crop_init()
         crop_resizing = true
         crop_x1, crop_y1 = x, y
         crop_x2, crop_y2 = x, y
+        clear_scr()
     end
 end
 
@@ -1193,8 +1203,10 @@ mp.add_key_binding("KP3", "webm_cut_to_end", cut_to_end)
 -- XXX: Don't know how to make `mp.add_key_binding` work with dragging.
 mp.set_key_bindings({{"mouse_btn0", crop_drag_end, crop_drag_start}}, "webm")
 mp.enable_key_bindings("webm")
+mp.add_key_binding("mouse_move", "webm_crop_drag", crop_drag)
+mp.add_key_binding("KP5", "webm_crop_init", crop_init_at_center)
+mp.add_key_binding("KP_ENTER", "webm_crop", crop)
 local rp = {repeatable = true}
-mp.add_key_binding("mouse_move", "webm_crop_drag", crop_drag, rp)
 mp.add_key_binding("KP7", "webm_crop_w_dec", crop_width_dec, rp)
 mp.add_key_binding("KP9", "webm_crop_w_inc", crop_width_inc, rp)
 mp.add_key_binding("-", "webm_crop_h_dec", crop_height_dec, rp)
@@ -1203,7 +1215,6 @@ mp.add_key_binding("KP4", "webm_crop_x_dec", crop_x_dec, rp)
 mp.add_key_binding("KP6", "webm_crop_x_inc", crop_x_inc, rp)
 mp.add_key_binding("KP8", "webm_crop_y_dec", crop_y_dec, rp)
 mp.add_key_binding("KP2", "webm_crop_y_inc", crop_y_inc, rp)
-mp.add_key_binding("KP_ENTER", "webm_crop", crop, rp)
 """
 
 
