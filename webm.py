@@ -106,7 +106,7 @@ def _ffmpeg(args, check_code=True, debug=False):
     try:
         p = subprocess.Popen(args)
     except Exception as exc:
-        raise Exception('Failed to run FFmpeg ({})'.format(exc))
+        raise Exception('failed to run FFmpeg ({})'.format(exc))
     p.communicate()
     if check_code and p.returncode != 0:
         raise Exception('FFmpeg exited with error')
@@ -122,7 +122,7 @@ def _ffmpeg_output(args, check_code=True, debug=False):
                 args, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)
     except Exception as exc:
-        raise Exception('Failed to run FFmpeg ({})'.format(exc))
+        raise Exception('failed to run FFmpeg ({})'.format(exc))
     out, err = p.communicate()
     if check_code and p.returncode != 0:
         raise Exception('FFmpeg exited with error')
@@ -139,7 +139,7 @@ def _mpv_output(args, check_code=True, catch_stdout=True, debug=False):
     try:
         p = subprocess.Popen(args, stderr=subprocess.PIPE, **kwargs)
     except Exception as exc:
-        raise Exception('Failed to run mpv ({})'.format(exc))
+        raise Exception('failed to run mpv ({})'.format(exc))
     out, err = p.communicate()
     if check_code and p.returncode != 0:
         raise Exception('mpv exited with error')
@@ -164,7 +164,7 @@ def check_dependencies():
         line = ffverout.split('\n', 1)[0]
         ffmpegv = re.match(r'ffmpeg version (\S+)', line).group(1)
     except Exception:
-        raise Exception('Cannot parse FFmpeg version')
+        raise Exception('cannot parse FFmpeg version')
     # NOTE: Checking only for '^x.y.z', possible non-numeric symbols
     # after 'z' don't matter.
     if re.match(r'\d+\.\d+\.\d+', ffmpegv):
@@ -194,7 +194,7 @@ def check_dependencies():
             mpvv = re.match(r'mpv (\S+)', mverout).group(1)
         except Exception:
             if need_mpv:
-                raise Exception('Cannot parse mpv version')
+                raise Exception('cannot parse mpv version')
         else:
             # NOTE: Checking only for '^x.y.z', possible non-numeric symbols
             # after 'z' don't matter.
@@ -391,13 +391,12 @@ def process_options(verinfo):
         if options.l is None:
             options.l = 8
         elif options.l <= 0:
-            parser.error('Bad limit value')
+            parser.error('bad limit value')
     else:
         if options.l is not None:
             parser.error('-l and -vb are mutually exclusive')
         if options.vb < 0:
             parser.error('invalid video bitrate')
-        options.l = None
     if options.crf is not None and (options.crf < 0 or options.crf > 63):
         parser.error('quality level must be in 0..63 range')
     if options.qmin is not None and (options.qmin < 0 or options.qmin > 63):
@@ -444,7 +443,7 @@ def _parse_time(time):
     # [hh]:[mm]:[ss[.xxx]]
     m = re.match(r'(?:(\d+):)?(?:(\d+)+:)?(\d+(?:\.\d+)?)$', time)
     if not m:
-        raise Exception('Invalid time {}'.format(time))
+        raise Exception('invalid time {}'.format(time))
     hours, minutes, seconds = m.groups()
     duration = float(seconds)
     if hours is not None:
@@ -593,7 +592,7 @@ def _get_durations(options):
     try:
         dur = re.search(r'\bDuration: ([^,]+)', out).group(1)
     except Exception:
-        raise Exception('Failed to parse duration of input file')
+        raise Exception('failed to parse duration of input file')
     else:
         induration = _parse_time(dur)
 
@@ -608,9 +607,9 @@ def _get_durations(options):
     if options.t is not None:
         outduration = _parse_time(options.t)
         if outduration == 0:
-            raise Exception('Duration must not be zero')
+            raise Exception('duration must not be zero')
         if shift + outduration > induration:
-            raise Exception('End position too far in the future')
+            raise Exception('end position too far in the future')
     elif options.to is not None:
         endpos = _parse_time(options.to)
         outduration = endpos - shift
@@ -631,9 +630,9 @@ def _get_durations(options):
         else:
             foutduration = _parse_time(options.tt)
             if foutduration == 0:
-                raise Exception('Duration must not be zero')
+                raise Exception('duration must not be zero')
             elif foutduration > induration:
-                raise Exception('End position too far in the future')
+                raise Exception('end position too far in the future')
     elif options.tot is not None:
         fendpos = _parse_time(options.tot)
         foutduration = fendpos - shift
@@ -685,7 +684,7 @@ def _calc_video_bitrate(options):
     if bitrate < 1:
         # Prevent failing to constant/CQ mode because of too low
         # limit/long duration/big audio bitrate.
-        raise Exception('Unable to calculate video bitrate')
+        raise Exception('unable to calculate video bitrate')
     return bitrate
 
 
