@@ -754,10 +754,13 @@ def _encode(options, firstpass):
             vfilters += ['setpts=PTS+{}/TB'.format(_parse_time(options.ss))]
         subtitles = 'subtitles='
         subfile = options.infile if options.sa is True else options.sa
-        # This escaping should be sufficient for FFmpeg filter argument
-        # (see ffmpeg-utils(1), "Quotes and escaping").
-        subfile = subfile.replace('\\', '\\\\')
-        subfile = subfile.replace("'", "\\'")
+        # Escape FFmpeg filter argument (see ffmpeg-filters(1), "Notes
+        # on filtergraph escaping"). Escaping rules are rather mad.
+        # NOTE: Known bugs: names like :.ass, 1:.ass still don't work.
+        # Seems like a bug in FFmpeg because _:.ass works ok.
+        subfile = subfile.replace('\\', r'\\')      # \ -> \\
+        subfile = subfile.replace("'",  r"'\\\''")  # ' -> '\\\''
+        subfile = subfile.replace(':',  r'\:')      # : -> \:
         subtitles += "'{}'".format(subfile)
         if options.si is not None:
             subtitles += ':si={}'.format(options.si)
@@ -803,7 +806,11 @@ def encode(options):
 
 def print_stats(options, start):
     print('='*50, file=sys.stderr)
-    print('Output file: {}'.format(options.outfile), file=sys.stderr)
+    filename = os.path.basename(options.outfile)
+    print("Output filename: {}".format(filename), file=sys.stderr)
+    filepath = os.path.abspath(options.outfile)
+    filepath = filepath.replace('\\', r'\\').replace("'", r"'\''")
+    print("Output filepath: '{}'".format(filepath), file=sys.stderr)
     print('Output duration: {}'.format(_timestamp(options.outduration)),
           file=sys.stderr)
     print('Output video bitrate: {}k'.format(options.vb), file=sys.stderr)
