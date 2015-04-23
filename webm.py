@@ -1332,13 +1332,13 @@ function dump_info()
 
     local vid = mp.get_property_number("vid")
     local vtrack = get_track(tracks, "video", vid)
-    -- Just in case re-check everything but actually if vid is defined,
-    -- ff-index should be also available.
+    -- Just in case re-check everything; though if vid is defined,
+    -- ff-index should be also available actually.
     if not vtrack or not vtrack["ff-index"] then
         log2webm("Cannot find video track, seems like sound file")
         return
     end
-    -- At least this field must be populated.
+    -- At least this value must be available.
     local vs = vtrack["ff-index"]
 
     local aid = mp.get_property_number("aid")
