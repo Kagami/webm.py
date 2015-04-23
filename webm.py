@@ -663,7 +663,7 @@ def _get_durations(options):
         ['-hide_banner', '-i', options.infile],
         check_code=False)['stderr']
     try:
-        dur = re.search(r'\bDuration: ([^,]+)', out).group(1)
+        dur = re.search(r'^\s+Duration: ([^,]+)', out, re.MULTILINE).group(1)
     except Exception:
         raise Exception('failed to parse duration of input file')
     else:
