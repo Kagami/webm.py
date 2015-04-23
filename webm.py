@@ -1358,7 +1358,7 @@ function dump_info()
 
     log2webm(string.format(
         "info=%d:%d:%s:%d:%s:%f",
-        vs or -1,
+        vs,
         as or -1,
         escape_filename(audio_file),
         si or -1,
