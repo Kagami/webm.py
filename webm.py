@@ -78,13 +78,22 @@ _NUM_TYPES = (int, long, float) if _PY2 else (int, float)
 # We can't use e.g. ``sys.stdout.encoding`` because user can redirect
 # the output so in Python2 it would return ``None``. Seems like
 # ``getpreferredencoding`` is the best remaining method.
+# NOTE: Python 3 uses ``getfilesystemencoding`` in ``os.getenv`` and
+# ``getpreferredencoding`` in ``subprocess`` module.
+# XXX: We will fail early with ugly traceback on any of this toplevel
+# decodes if encoding is wrong.
 OS_ENCODING = locale.getpreferredencoding() or 'utf-8'
 
 
+ARGS = sys.argv[1:]
+# In Python2 ``sys.argv`` is a list of bytes. See:
+# <http://stackoverflow.com/q/4012571>,
+# <https://bugs.python.org/issue2128> for details.
+if _PY2: ARGS = [arg.decode(OS_ENCODING) for arg in ARGS]
+
+
+# Python3 returns unicode here fortunately.
 FFMPEG_PATH = os.getenv('FFMPEG', 'ffmpeg')
-# XXX: This probably may fail on non UTF-8 locales.
-# Python 3 uses ``getfilesystemencoding`` to decode environment
-# variables: <https://docs.python.org/3/library/os.html#os.getenv>.
 if _PY2: FFMPEG_PATH = FFMPEG_PATH.decode(OS_ENCODING)
 
 
@@ -183,7 +192,7 @@ def check_dependencies():
         raise Exception('FFmpeg is not compiled with libopus support')
 
     mpvv = 'no'
-    need_mpv = '-p' in sys.argv[1:]
+    need_mpv = '-p' in ARGS
     try:
         mverout = _mpv_output(['--version'])['stdout']
     except Exception:
@@ -369,17 +378,11 @@ def process_options(verinfo):
         help='skip any dependency/version checkings\n'
              'advanced option, use at your own risk')
 
-    args = sys.argv[1:]
-    if _PY2:
-        # Convert command line arguments to unicode.
-        # See: <http://stackoverflow.com/q/4012571>,
-        # <https://bugs.python.org/issue2128> for details.
-        args = [arg.decode(OS_ENCODING) for arg in args]
-    options = parser.parse_args(args)
     # Additional input options validation.
     # NOTE: We ensure only minimal checkings here to not restrict the
     # possible weird uses. E.g. ow, oh, si can be zero or negative; vs,
     # as can be arbitrary.
+    options = parser.parse_args(ARGS)
     if options.outfile is None:
         if options.infile[-5:] == '.webm':
             # Don't overwrite input file.
@@ -912,7 +915,7 @@ def print_stats(options, start):
 
 
 def _is_verbose(options):
-    default = '-v' in sys.argv[1:]
+    default = '-v' in ARGS
     return getattr(options, 'verbose', default)
 
 
@@ -932,7 +935,7 @@ def main():
     verinfo = {'pythonv': '?', 'ffmpegv': '?', 'mpvv': '?'}
     options = None
     try:
-        if '-cn' not in sys.argv[1:]:
+        if '-cn' not in ARGS:
             verinfo = check_dependencies()
         options = process_options(verinfo)
         if options.p:
