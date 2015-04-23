@@ -39,8 +39,6 @@ use custom location of FFmpeg executable:
 """
 
 # TODO:
-#     * Shift audio/subtitles by given amount of time
-#     * Dump audio/subs shift from interactive mode
 #     * Better error reporting in verbose mode
 #     * VP8/Vorbis mode
 #     * Fit audio to limit
@@ -303,8 +301,9 @@ def process_options(verinfo):
         '-qmax', metavar='qmax', type=int,
         help='set maximum (worst) quality level (0..63)')
     parser.add_argument(
-        '-vs', metavar='videostream', type=int,
-        help='video stream number to use (default: best)')
+        '-vs', metavar='videostream',
+        help='video stream number to use (default: best)\n'
+             "that's absolute value obtainable with ffmpeg -i infile")
     parser.add_argument(
         '-vf', metavar='videofilters',
         help='additional video filters to use')
@@ -324,8 +323,9 @@ def process_options(verinfo):
              'if specified, its first stream will be muxed into resulting\n'
              'file unless -as is also given')
     parser.add_argument(
-        '-as', metavar='audiostream', type=int,
-        help='audio stream number to use (default: best/suitable)')
+        '-as', metavar='audiostream',
+        help='audio stream number to use (default: best/suitable)\n'
+             "that's absolute value obtainable with ffmpeg -i infile")
     parser.add_argument(
         '-af', metavar='audiofilters',
         help='audio filters to use')
@@ -336,10 +336,16 @@ def process_options(verinfo):
              'if filename is omitted')
     parser.add_argument(
         '-si', metavar='subindex', type=int,
-        help='subtitle index to use (default: first/suitable)\n'
+        help='subtitle index to use (default: best)\n'
              "note: it's not the global stream number, but the index of\n"
              'subtitle stream across other subtitles; see ffmpeg-filters(1)\n'
              'for details')
+    parser.add_argument(
+        '-sd', metavar='subdelay', type=float,
+        help='delay subtitles by this number of seconds\n'
+             'note that in mpv sub-delay value is actually negated,\n'
+             'i.e. sub-delay=1s in mpv actually shift subtitles backward;\n'
+             'you should pass -1 to this option to actually shift backward')
     parser.add_argument(
         '-p', action='store_true',
         help='run player (mpv) in interactive mode to cut and crop video\n'
@@ -373,8 +379,8 @@ def process_options(verinfo):
     options = parser.parse_args(args)
     # Additional input options validation.
     # NOTE: We ensure only minimal checkings here to not restrict the
-    # possible weird uses. E.g. ow, oh, vs, as, si can be zero or
-    # negative.
+    # possible weird uses. E.g. ow, oh, si can be zero or negative; vs,
+    # as can be arbitrary.
     if options.outfile is None:
         if options.infile[-5:] == '.webm':
             # Don't overwrite input file.
@@ -420,7 +426,7 @@ def process_options(verinfo):
                 options.aa is not None or
                 getattr(options, 'as') is not None or
                 options.af is not None):
-            parser.error('you cannot use -an with -ab, -aa, -as, af')
+            parser.error('you cannot use -an with -ab, -aa, -as, -af')
         # No audio, i.e. its bitrate is zero.
         options.ab = 0
     else:
@@ -432,6 +438,9 @@ def process_options(verinfo):
             # and audio bitrates be float? Plese send bugreport if you
             # have some problems with that.
             parser.error('invalid audio bitrate')
+    if options.sa is None:
+        if options.si is not None or options.sd is not None:
+            parser.error('you have not specified -sa')
     if options.p:
         if (options.ss is not None or
                 options.t is not None or
@@ -476,6 +485,51 @@ def _doc_to_help(doc):
     return '\n'.join(lines)
 
 
+def _split_lua_params(s, delim=':'):
+    """
+    Deserialize colon-separated values passed from Lua.
+    Based on <http://stackoverflow.com/a/18092547>.
+    """
+    # TODO: Move to JSON intechanging format with mpv 0.9+. See this
+    # commit: <https://github.com/mpv-player/mpv/commit/daabbe3>.
+    if not s:
+        return
+    itr = iter(s)
+    param = ''
+    for ch in itr:
+        if ch == '\\':
+            try:
+                ch2 = next(itr)
+            except StopIteration:
+                raise Exception('badly escaped string')
+            else:
+                if ch2 == 'n':
+                    param += '\n'
+                else:
+                    param += ch2
+        elif ch == delim:
+            yield param
+            param = ''
+        else:
+            param += ch
+    yield param
+
+
+def _pos_int_check(s):
+    return re.match(r'\d+$', s) is not None
+
+
+def _diff_dicts(defaults, d2):
+    diff = {}
+    for k, v in d2.items():
+        try:
+            if defaults[k] != v:
+                diff[k] = v
+        except KeyError:
+            diff[k] = v
+    return diff
+
+
 def run_interactive_mode(options):
     """
     Running interactive mode.
@@ -493,6 +547,10 @@ def run_interactive_mode(options):
     Press KP_ENTER when you finished with crop.
     Also you can press KP5 to init crop area at the center of video.
 
+    Press "i" to dump info about currently selected video/audio/sub
+    tracks and subtitles delay from mpv.
+    Caution: it may redefine your appropriate passed options.
+
     Once you defined cut fragment and/or crop are, close the
     player and let the script do all hard work for calculating
     the bitrate and encoding.
@@ -507,9 +565,6 @@ def run_interactive_mode(options):
 
     # Disabling OSC since it conflicts with interactive mode.
     args = ['--no-osc', '--msg-level', 'all=error', '--script', luafile]
-    if options.si is not None:
-        # mpv subtitle indexes start with 1.
-        args += ['--sid', _TEXT_TYPE(options.si + 1)]
     if options.poo is not None:
         args += shlex.split(options.poo)
     args += [options.infile]
@@ -519,22 +574,46 @@ def run_interactive_mode(options):
     out = _mpv_output(args, debug=True, catch_stdout=False)['stderr']
     cut = None
     crop = None
-    for line in reversed(out.split()):
+    # Using the falseness of empty dict to simplify the code.
+    info = {}
+    for line in reversed(out.split('\n')):
         if not cut:
             cutm = re.match(
                 r'cut=(-1|\d+(?:\.\d+)?):(-1|\d+(?:\.\d+)?)$',
                 line)
             if cutm:
                 cut = cutm.groups()
-                if crop:
+                if crop and info:
                     break
                 continue
         if not crop:
             cropm = re.match(r'(crop=(\d+):(\d+):(\d+):(\d+))$', line)
             if cropm:
                 crop = cropm.groups()
-                if cut:
+                if cut and info:
                     break
+                continue
+        if not info and line.startswith('info='):
+            params = list(_split_lua_params(line[5:]))
+            if len(params) != 6:
+                continue
+            vs, as_, audio_file, si, sub_file, sub_delay = params
+            if not all(_pos_int_check(s) for s in [vs, as_, si]):
+                continue
+            if not re.match(r'-?\d+(\.\d+)?$', sub_delay):
+                continue
+            vs, as_, si = int(vs), int(as_), int(si)
+            sub_delay = float(sub_delay)
+            info = _diff_dicts({
+                'as': -1, 'aa': '',
+                'si': -1, 'sa': '', 'sd': 0,
+            }, {
+                'vs': vs,
+                'as': as_, 'aa': audio_file,
+                'si': si, 'sa': sub_file, 'sd': sub_delay,
+            })
+            if info and cut and crop:
+                break
 
     # NOTE: We don't mind checking cut ranges and crop values because:
     # 1) It should be already checked in Lua script
@@ -549,8 +628,11 @@ def run_interactive_mode(options):
         print('[CROP] x1={}, y1={}, width={}, height={}'.format(
                 crop[3], crop[4], crop[1], crop[2]),
               file=sys.stderr)
+    if info:
+        changes = ', '.join('{}={}'.format(k, v) for k, v in info.items())
+        print('[DUMP] {}'.format(changes), file=sys.stderr)
 
-    if cut or crop:
+    if cut or crop or info:
         try:
             ok = input('Continue with that settings? Y/n ')
         except EOFError:
@@ -564,10 +646,11 @@ def run_interactive_mode(options):
             if crop:
                 options.vfi = crop[0] if options.vfi is None \
                     else '{},{}'.format(options.vfi, crop[0])
+            options.__dict__.update(info)
         else:
             sys.exit(1)
     else:
-        print("You haven't defined neither cut nor crop.", file=sys.stderr)
+        print("You haven't defined cut/crop or dumped info.", file=sys.stderr)
         try:
             ok = input('Encode input video intact? y/N ')
         except EOFError:
@@ -703,12 +786,11 @@ def _encode(options, firstpass):
     if (options.vs is not None or
             getattr(options, 'as') is not None or
             options.aa is not None):
-        vstream = 0 if options.vs is None else options.vs
+        vstream = 'v:0' if options.vs is None else options.vs
         args += ['-map', '0:{}'.format(vstream)]
         ainput = 0 if options.aa is None else 1
         astream = getattr(options, 'as')
-        if astream is None:
-            astream = 1 if options.aa is None else 0
+        astream = 'a:0' if astream is None else astream
         args += ['-map', '{}:{}'.format(ainput, astream)]
     if options.mn:
         args += ['-map_metadata', '-1']
@@ -740,22 +822,27 @@ def _encode(options, firstpass):
         vfilters += [scale]
         args += ['-sws_flags', options.sws]
     if options.sa is not None:
+        sub_delay = 0
         if options.ss is not None:
-            vfilters += ['setpts=PTS+{}/TB'.format(_parse_time(options.ss))]
+            sub_delay += _parse_time(options.ss)
+        if options.sd is not None:
+            sub_delay += options.sd
+        if sub_delay:
+            vfilters += ['setpts=PTS+{}/TB'.format(sub_delay)]
         subtitles = 'subtitles='
-        subfile = options.infile if options.sa is True else options.sa
+        sub_file = options.infile if options.sa is True else options.sa
         # Escape FFmpeg filter argument (see ffmpeg-filters(1), "Notes
         # on filtergraph escaping"). Escaping rules are rather mad.
         # NOTE: Known bugs: names like :.ass, 1:.ass still don't work.
         # Seems like a bug in FFmpeg because _:.ass works ok.
-        subfile = subfile.replace('\\', r'\\')      # \ -> \\
-        subfile = subfile.replace("'",  r"'\\\''")  # ' -> '\\\''
-        subfile = subfile.replace(':',  r'\:')      # : -> \:
-        subtitles += "'{}'".format(subfile)
+        sub_file = sub_file.replace('\\', r'\\')      # \ -> \\
+        sub_file = sub_file.replace("'",  r"'\\\''")  # ' -> '\\\''
+        sub_file = sub_file.replace(':',  r'\:')      # : -> \:
+        subtitles += "'{}'".format(sub_file)
         if options.si is not None:
             subtitles += ':si={}'.format(options.si)
         vfilters += [subtitles]
-        if options.ss is not None:
+        if sub_delay:
             vfilters += ['setpts=PTS-STARTPTS']
     if options.vf is not None:
         vfilters += [options.vf]
@@ -1196,6 +1283,99 @@ function crop_y_inc()
     end
 end
 
+function get_track(tracks, typ, id)
+    if not id then return end
+    for i = 1, #tracks do
+        local track = tracks[i]
+        if track.type == typ and track.id == id then
+            return track
+        end
+    end
+end
+
+function get_sub_index(tracks, strack)
+    -- In this function we assume that order of subtitle tracks is the
+    -- same for both ffmpeg and mpv. i.e.:
+    -- 1) for internal sub: si = sid - 1
+    -- 2) for external sub: si = index of selected subtitle in that file
+    -- This might be not true though.
+    if not strack then return end
+    if not strack.external then
+        return strack.id - 1
+    end
+    local stracks = {}
+    for i = 1, #tracks do
+        local track = tracks[i]
+        if track["external-filename"] == strack["external-filename"] and
+                track.type == "sub" then
+            table.insert(stracks, track)
+        end
+    end
+    table.sort(stracks, function(a, b) return a.id < b.id end)
+    for i = 1, #stracks do
+        if stracks[i].id == strack.id then
+            return i - 1
+        end
+    end
+end
+
+function escape_filename(name)
+    if name then
+        return name:gsub("\\", "\\\\"):gsub(":", "\\:"):gsub("\n", "\\n")
+    else
+        return ""
+    end
+end
+
+function dump_info()
+    local tracks = mp.get_property_native("track-list")
+
+    local vid = mp.get_property_number("vid")
+    local vtrack = get_track(tracks, "video", vid)
+    -- Just in case re-check everything but actually if vid is defined,
+    -- ff-index should be also available.
+    if not vtrack or not vtrack["ff-index"] then
+        log2webm("Cannot find video track, seems like sound file")
+        return
+    end
+    -- At least this field must be populated.
+    local vs = vtrack["ff-index"]
+
+    local aid = mp.get_property_number("aid")
+    local atrack = get_track(tracks, "audio", aid) or {}
+    local as = atrack["ff-index"]
+    local audio_file = atrack["external-filename"]
+
+    local sid = mp.get_property_number("sid")
+    local strack = get_track(tracks, "sub", sid)
+    local si = get_sub_index(tracks, strack)
+    local sub_file = strack and strack["external-filename"]
+    local sub_delay = mp.get_property_number("sub-delay") or 0
+    -- NOTE: This is funny but mplayer's/mpv's value of sub delay is
+    -- actually negated.
+    sub_delay = -sub_delay
+    if math.abs(sub_delay) < 0.01 then sub_delay = 0 end  -- Fix fp inaccuracy
+
+    log2webm(string.format(
+        "info=%d:%d:%s:%d:%s:%f",
+        vs or -1,
+        as or -1,
+        escape_filename(audio_file),
+        si or -1,
+        escape_filename(sub_file),
+        sub_delay))
+
+    local changes = {}
+    function ins(v) table.insert(changes, v) end
+    ins("vs=" .. vs)
+    if as             then ins("as=" .. as) end
+    if audio_file     then ins("aa=" .. audio_file) end
+    if si             then ins("si=" .. si) end
+    if sub_file       then ins("sa=" .. sub_file) end
+    if sub_delay ~= 0 then ins(string.format("sd=%.2f", sub_delay)) end
+    log2user("Dumped " .. table.concat(changes, ", "))
+end
+
 mp.add_key_binding("c", "webm_cut", cut)
 mp.add_key_binding("KP1", "webm_cut_from_start", cut_from_start)
 mp.add_key_binding("KP3", "webm_cut_to_end", cut_to_end)
@@ -1215,6 +1395,8 @@ mp.add_key_binding("KP4", "webm_crop_x_dec", crop_x_dec, rp)
 mp.add_key_binding("KP6", "webm_crop_x_inc", crop_x_inc, rp)
 mp.add_key_binding("KP8", "webm_crop_y_dec", crop_y_dec, rp)
 mp.add_key_binding("KP2", "webm_crop_y_inc", crop_y_inc, rp)
+
+mp.add_key_binding("i", "webm_dump_info", dump_info)
 """
 
 
