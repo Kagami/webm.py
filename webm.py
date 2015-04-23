@@ -755,8 +755,11 @@ def _calc_video_bitrate(options):
     # mebibytes * 1024 * 8 = kbits
     vbitrate = int(math.floor(options.l * 8192 / outduration - options.ab))
     if vbitrate < 1:
-        # Too low limit/long duration/big audio bitrate.
-        raise Exception('unable to calculate video bitrate')
+        raise Exception(
+            '\n\nUnable to calculate video bitrate for the given limit.\n'
+            'Either limit is too low, duration of the video is too long\n'
+            'or audio bitrate is too big.\n'
+            'Consider fixing one of this or just set bitrate manually.')
     return vbitrate
 
 
