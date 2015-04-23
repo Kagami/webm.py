@@ -175,11 +175,11 @@ def check_dependencies():
         # Most probably version from git. Do nothing.
         pass
 
-    codecout = _ffmpeg_output(['-codecs'])['stdout']
-    if not re.search(r'encoders:.*\blibvpx-vp9\b', codecout):
+    codecout = _ffmpeg_output(['-hide_banner', '-codecs'])['stdout']
+    if not re.search(r'\bencoders:.*\blibvpx-vp9\b', codecout):
         raise Exception(
             'FFmpeg is not compiled with libvpx (libvpx-vp9) support')
-    if not re.search(r'encoders:.*\blibopus\b', codecout):
+    if not re.search(r'\bencoders:.*\blibopus\b', codecout):
         raise Exception('FFmpeg is not compiled with libopus support')
 
     mpvv = 'no'
