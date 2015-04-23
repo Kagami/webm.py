@@ -303,7 +303,7 @@ def process_options(verinfo):
     parser.add_argument(
         '-vs', metavar='videostream',
         help='video stream number to use (default: best)\n'
-             "that's absolute value obtainable with ffmpeg -i infile")
+             "that's absolute stream index obtainable with ffmpeg -i infile")
     parser.add_argument(
         '-vf', metavar='videofilters',
         help='additional video filters to use')
@@ -324,8 +324,8 @@ def process_options(verinfo):
              'file unless -as is also given')
     parser.add_argument(
         '-as', metavar='audiostream',
-        help='audio stream number to use (default: best/suitable)\n'
-             "that's absolute value obtainable with ffmpeg -i infile")
+        help='audio stream number to use (default: best)\n'
+             "that's absolute stream index obtainable with ffmpeg -i infile")
     parser.add_argument(
         '-af', metavar='audiofilters',
         help='audio filters to use')
