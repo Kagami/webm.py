@@ -553,7 +553,7 @@ def run_interactive_mode(options):
     Select crop area with the mouse and adijust it precisely with
     KP4/KP8/KP6/KP2 (move crop area left/up/right/down) and
     KP7/KP9/-/+ (decrease/increase width/height).
-    Press KP_ENTER when you finished with crop.
+    Press "a" when you finished with crop.
     Also you can press KP5 to init crop area at the center of video.
 
     Press "i" to dump info about currently selected video/audio/sub
@@ -1399,7 +1399,7 @@ mp.set_key_bindings({{"mouse_btn0", crop_drag_end, crop_drag_start}}, "webm")
 mp.enable_key_bindings("webm")
 mp.add_key_binding("mouse_move", "webm_crop_drag", crop_drag)
 mp.add_key_binding("KP5", "webm_crop_init", crop_init_at_center)
-mp.add_key_binding("KP_ENTER", "webm_crop", crop)
+mp.add_key_binding("a", "webm_crop", crop)
 local rp = {repeatable = true}
 mp.add_key_binding("KP7", "webm_crop_w_dec", crop_width_dec, rp)
 mp.add_key_binding("KP9", "webm_crop_w_inc", crop_width_inc, rp)
