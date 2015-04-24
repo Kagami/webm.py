@@ -70,7 +70,7 @@ python webm.py -i in.mkv -crf 20 -vb 600
 # Constant quality
 python webm.py -i in.mkv -crf 20 -vb 0
 
-# Encode with VP8 & Vorbis:
+# Encode with VP8 & Vorbis
 python {title} -i in.mkv -vp8
 ```
 

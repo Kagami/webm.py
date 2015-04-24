@@ -606,8 +606,8 @@ def _diff_dicts(defaults, d2):
 def run_interactive_mode(options):
     """
     Note: if you keyboard doesn't have keypad keys and you still want
-    to use appropriate actions (it's not mandatory to define the cut or
-    crop area), pass "--help-imode" flag to program to see how.
+    to use appropriate actions (they're not mandatory to define the cut
+    or crop area), pass "--help-imode" flag to program to see how.
 
     Press "c" first time to mark the start of the fragment.
     Press it again to mark the end of the fragment.
