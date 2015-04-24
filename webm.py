@@ -580,6 +580,7 @@ def run_interactive_mode(options):
     # Using the falseness of empty dict to simplify the code.
     info = {}
     for line in reversed(out.split('\n')):
+        line = line.rstrip('\r')
         if not cut:
             cutm = re.match(
                 r'cut=(-1|\d+(?:\.\d+)?):(-1|\d+(?:\.\d+)?)$',
