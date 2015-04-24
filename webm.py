@@ -248,6 +248,9 @@ def process_options(verinfo):
         description=doc,
         formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument(
+        '-hi', '--help-imode', action='store_true',
+        help='show help on interactive mode')
+    parser.add_argument(
         '-V', '--version',
         action='version',
         version='%(prog)s ' + __version__)
@@ -255,7 +258,7 @@ def process_options(verinfo):
         '-v', action='store_true', dest='verbose',
         help='Enable verbose mode')
     parser.add_argument(
-        '-i', dest='infile', metavar='infile', required=True,
+        '-i', dest='infile', metavar='infile',
         help='input file, e.g. infile.mkv (required)')
     parser.add_argument(
         'outfile', nargs='?',
@@ -390,6 +393,14 @@ def process_options(verinfo):
     # possible weird uses. E.g. ow, oh, si can be zero or negative; vs,
     # as can be arbitrary.
     options = parser.parse_args(ARGS)
+    if options.help_imode:
+        print_interactive_help()
+        sys.exit()
+    elif options.infile is None:
+        # Seems like argparse doesn't allow multiple "help" arguments so
+        # we defined -i as not required, but in fact it's required for
+        # everything except the help.
+        parser.error('the following arguments are required: -i')
     if options.outfile is None:
         if options.infile[-5:] == '.webm':
             # Don't overwrite input file.
@@ -487,7 +498,7 @@ def _timestamp(duration):
     return ts
 
 
-def _doc_to_help(doc):
+def _doc2help(doc):
     doc = doc.strip()
     lines = doc.split('\n')
     lines = [line.strip() for line in lines]
@@ -541,8 +552,6 @@ def _diff_dicts(defaults, d2):
 
 def run_interactive_mode(options):
     """
-    Running interactive mode.
-
     Press "c" first time to mark the start of the fragment.
     Press it again to mark the end of the fragment.
     Press "KP1" after "c" to define the fragment from
@@ -555,6 +564,9 @@ def run_interactive_mode(options):
     KP7/KP9/-/+ (decrease/increase width/height).
     Press "a" when you finished with crop.
     Also you can press KP5 to init crop area at the center of video.
+    Note: if you keyboard doesn't have keypad keys and you still want
+    to use them to (it's not mandatory to define the crop area),
+    pass "--help-imode" flag to program to see how.
 
     Press "i" to dump info about currently selected video/audio/sub
     tracks and subtitles delay from mpv.
@@ -577,7 +589,8 @@ def run_interactive_mode(options):
     if options.poo is not None:
         args += shlex.split(options.poo)
     args += [options.infile]
-    print(_doc_to_help(run_interactive_mode.__doc__), file=sys.stderr)
+    print('Running interactive mode.\n', file=sys.stderr)
+    print(_doc2help(run_interactive_mode.__doc__), file=sys.stderr)
 
     # We let the user to see stderr output and catch stdout by ourself.
     out = _mpv_output(args, debug=True, catch_stdout=False)['stderr']
@@ -666,6 +679,41 @@ def run_interactive_mode(options):
             sys.exit(1)
         if ok == '' or ok.lower() != 'y':
             sys.exit(1)
+
+
+def print_interactive_help():
+    """
+    You can redefine hotkeys by placing this to your input.conf:
+
+    # This is the defaults:
+    c script_binding webm_cut
+    KP1 script_binding webm_cut_from_start
+    KP3 script_binding webm_cut_to_end
+    mouse_move script_binding webm_crop_drag
+    KP5 script_binding webm_crop_init
+    a script_binding webm_crop
+    KP7 script_binding webm_crop_w_dec
+    KP9 script_binding webm_crop_w_inc
+    - script_binding webm_crop_h_dec
+    + script_binding webm_crop_h_inc
+    KP4 script_binding webm_crop_x_dec
+    KP6 script_binding webm_crop_x_inc
+    KP8 script_binding webm_crop_y_dec
+    KP2 script_binding webm_crop_y_inc
+    i script_binding webm_dump_info
+
+    You also can change some default options by creating webm.conf in your
+    lua-settings directory (see <http://mpv.io/manual/stable/#configuration>):
+
+    # This is the defaults:
+    crop_alpha = 180  # Transparency of crop area
+    crop_x_step = 2   # Precision of crop area adjusting from the keyboard
+    crop_y_step = 2   # Precision of crop area adjusting from the keyboard
+    """
+    doc = '{}\n\n{}'.format(
+        _doc2help(run_interactive_mode.__doc__),
+        _doc2help(print_interactive_help.__doc__))
+    print(doc, file=sys.stderr)
 
 
 def _get_durations(options):
@@ -954,8 +1002,7 @@ def main():
         if _is_verbose(options):
             exc = '\n\n' + traceback.format_exc()[:-1]
         err = 'Cannot proceed due to the following error: {}'.format(exc)
-        print(err, file=sys.stderr)
-        sys.exit(1)
+        sys.exit(err)
     finally:
         cleanup(options)
 
