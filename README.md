@@ -71,7 +71,7 @@ python webm.py -i in.mkv -crf 20 -vb 600
 python webm.py -i in.mkv -crf 20 -vb 0
 
 # Encode with VP8 & Vorbis
-python {title} -i in.mkv -vp8
+python webm.py -i in.mkv -vp8
 ```
 
 ### Interactive mode
