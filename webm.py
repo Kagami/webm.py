@@ -73,6 +73,7 @@ __license__ = 'CC0'
 _PY2 = sys.version_info[0] == 2
 _TEXT_TYPE = unicode if _PY2 else str
 _NUM_TYPES = (int, long, float) if _PY2 else (int, float)
+_input = raw_input if _PY2 else input
 
 
 # We can't use e.g. ``sys.stdout.encoding`` because user can redirect
@@ -636,7 +637,7 @@ def run_interactive_mode(options):
 
     if cut or crop or info:
         try:
-            ok = input('Continue with that settings? Y/n ')
+            ok = _input('Continue with that settings? Y/n ')
         except EOFError:
             sys.exit(1)
         if ok == '' or ok.lower() == 'y':
@@ -654,7 +655,7 @@ def run_interactive_mode(options):
     else:
         print("You haven't defined cut/crop or dumped info.", file=sys.stderr)
         try:
-            ok = input('Encode input video intact? y/N ')
+            ok = _input('Encode input video intact? y/N ')
         except EOFError:
             sys.exit(1)
         if ok == '' or ok.lower() != 'y':
