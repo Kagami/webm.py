@@ -983,11 +983,13 @@ local move_start_x1, move_start_y1 = 0, 0
 
 function log2user(str)
     io.stdout:write(str .. "\n")
+    io.stdout:flush()
     mp.osd_message(str, 2)
 end
 
 function log2webm(str)
     io.stderr:write(str .. "\n")
+    io.stderr:flush()
 end
 
 function timestamp(duration)
