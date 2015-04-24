@@ -398,7 +398,7 @@ def process_options(verinfo):
         sys.exit()
     elif options.infile is None:
         # Seems like argparse doesn't allow multiple "help" arguments so
-        # we defined -i as not required, but in fact it's required for
+        # we define -i as not required, but in fact it's required for
         # everything except the help.
         parser.error('the following arguments are required: -i')
     if options.outfile is None:
@@ -552,6 +552,10 @@ def _diff_dicts(defaults, d2):
 
 def run_interactive_mode(options):
     """
+    Note: if you keyboard doesn't have keypad keys and you still want
+    to use appropriate actions (it's not mandatory to define the cut or
+    crop area), pass "--help-imode" flag to program to see how.
+
     Press "c" first time to mark the start of the fragment.
     Press it again to mark the end of the fragment.
     Press "KP1" after "c" to define the fragment from
@@ -564,9 +568,6 @@ def run_interactive_mode(options):
     KP7/KP9/-/+ (decrease/increase width/height).
     Press "a" when you finished with crop.
     Also you can press KP5 to init crop area at the center of video.
-    Note: if you keyboard doesn't have keypad keys and you still want
-    to use them to (it's not mandatory to define the crop area),
-    pass "--help-imode" flag to program to see how.
 
     Press "i" to dump info about currently selected video/audio/sub
     tracks and subtitles delay from mpv.
@@ -683,24 +684,24 @@ def run_interactive_mode(options):
 
 def print_interactive_help():
     """
-    You can redefine hotkeys by placing this to your input.conf:
+    You can redefine hotkeys by placing this to your input.conf and
+    changing the key (first column):
 
     # This is the defaults:
-    c script_binding webm_cut
+    c   script_binding webm_cut
     KP1 script_binding webm_cut_from_start
     KP3 script_binding webm_cut_to_end
-    mouse_move script_binding webm_crop_drag
+    a   script_binding webm_crop
     KP5 script_binding webm_crop_init
-    a script_binding webm_crop
     KP7 script_binding webm_crop_w_dec
     KP9 script_binding webm_crop_w_inc
-    - script_binding webm_crop_h_dec
-    + script_binding webm_crop_h_inc
+    -   script_binding webm_crop_h_dec
+    +   script_binding webm_crop_h_inc
     KP4 script_binding webm_crop_x_dec
     KP6 script_binding webm_crop_x_inc
     KP8 script_binding webm_crop_y_dec
     KP2 script_binding webm_crop_y_inc
-    i script_binding webm_dump_info
+    i   script_binding webm_dump_info
 
     You also can change some default options by creating webm.conf in your
     lua-settings directory (see <http://mpv.io/manual/stable/#configuration>):
