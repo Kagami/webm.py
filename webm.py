@@ -130,14 +130,16 @@ def _ffmpeg_output(args, check_code=True, debug=False):
     try:
         p = subprocess.Popen(
                 args, stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
+                stderr=subprocess.PIPE,
+                universal_newlines=True)
     except Exception as exc:
         raise Exception('failed to run FFmpeg ({})'.format(exc))
     out, err = p.communicate()
     if check_code and p.returncode != 0:
         raise Exception('FFmpeg exited with error')
-    out = out.decode(OS_ENCODING)
-    err = err.decode(OS_ENCODING)
+    if _PY2:
+        out = out.decode(OS_ENCODING)
+        err = err.decode(OS_ENCODING)
     return {'stdout': out, 'stderr': err, 'code': p.returncode}
 
 
@@ -147,15 +149,19 @@ def _mpv_output(args, check_code=True, catch_stdout=True, debug=False):
         print('='*50 + '\n' + ' '.join(args) + '\n' + '='*50, file=sys.stderr)
     kwargs = {'stdout': subprocess.PIPE} if catch_stdout else {}
     try:
-        p = subprocess.Popen(args, stderr=subprocess.PIPE, **kwargs)
+        p = subprocess.Popen(
+            args, stderr=subprocess.PIPE,
+            universal_newlines=True,
+            **kwargs)
     except Exception as exc:
         raise Exception('failed to run mpv ({})'.format(exc))
     out, err = p.communicate()
     if check_code and p.returncode != 0:
         raise Exception('mpv exited with error')
-    if catch_stdout:
-        out = out.decode(OS_ENCODING)
-    err = err.decode(OS_ENCODING)
+    if _PY2:
+        if catch_stdout:
+            out = out.decode(OS_ENCODING)
+        err = err.decode(OS_ENCODING)
     return {'stdout': out, 'stderr': err, 'code': p.returncode}
 
 
@@ -580,7 +586,6 @@ def run_interactive_mode(options):
     # Using the falseness of empty dict to simplify the code.
     info = {}
     for line in reversed(out.split('\n')):
-        line = line.rstrip('\r')
         if not cut:
             cutm = re.match(
                 r'cut=(-1|\d+(?:\.\d+)?):(-1|\d+(?:\.\d+)?)$',
