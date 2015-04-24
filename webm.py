@@ -5,6 +5,7 @@ convert videos to webm format using FFmpeg
 
 features:
   - encodes input video to webm container with VP9 and Opus
+  - optional VP8/Vorbis mode
   - uses 2-pass encoding with the settings recommended by the developers
   - fits output file to the size limit by default
   - allows to select video/audio streams and external audio track
@@ -32,6 +33,7 @@ examples:
   - CQ with custom limit:       python {title} -i in.mkv -crf 20 -l 6
   - CQ with custom bitrate:     python {title} -i in.mkv -crf 20 -vb 600
   - constant quality:           python {title} -i in.mkv -crf 20 -vb 0
+  - encode with VP8 & Vorbis:   python {title} -i in.mkv -vp8
 
 use custom location of FFmpeg executable:
   - *nix:    FFMPEG=/opt/ffmpeg/ffmpeg python {title} -i in.mkv
@@ -40,7 +42,6 @@ use custom location of FFmpeg executable:
 
 # TODO:
 #     * Better error reporting in verbose mode
-#     * VP8/Vorbis mode
 #     * Fit audio to limit
 #     * Optionally use mkvmerge for muxing
 #     * Best quality mode
@@ -192,11 +193,16 @@ def check_dependencies():
         pass
 
     codecout = _ffmpeg_output(['-hide_banner', '-codecs'])['stdout']
+    if not re.search(r'\bencoders:.*\blibvpx\b', codecout):
+        raise Exception('FFmpeg is not compiled with libvpx support')
     if not re.search(r'\bencoders:.*\blibvpx-vp9\b', codecout):
-        raise Exception(
-            'FFmpeg is not compiled with libvpx (libvpx-vp9) support')
+        raise Exception('used libvpx has not VP9 support')
     if not re.search(r'\bencoders:.*\blibopus\b', codecout):
         raise Exception('FFmpeg is not compiled with libopus support')
+    if ('-vorbis' in ARGS or
+            ('-vp8' in ARGS and not '-opus' in ARGS)):
+        if not re.search(r'\bencoders:.*\blibvorbis\b', codecout):
+            raise Exception('FFmpeg is not compiled with libvorbis support')
 
     mpvv = 'no'
     need_mpv = '-p' in ARGS
@@ -238,6 +244,22 @@ def _is_same_paths(path1, path2):
     except Exception:
         return False
 
+
+def _vorbisq2bitrate(q):
+    return {
+        -1: 45,
+         0: 64,
+         1: 80,
+         2: 96,
+         3: 112,
+         4: 128,
+         5: 160,
+         6: 192,
+         7: 224,
+         8: 256,
+         9: 320,
+        10: 500,
+    }[q]
 
 def process_options(verinfo):
     import argparse
@@ -307,17 +329,20 @@ def process_options(verinfo):
         help='filesize limit in mebibytes (default: 8)\n'
              '-l and -vb are mutually exclusive')
     parser.add_argument(
+        '-vp8', action='store_true',
+        help='use VP8 codec for video, implies -vorbis')
+    parser.add_argument(
         '-vb', metavar='bitrate', type=int,
         help='video bitrate in kbits')
     parser.add_argument(
         '-crf', metavar='crf', type=int,
-        help='set the quality level (0..63)')
+        help='set the video quality level (0..63)')
     parser.add_argument(
         '-qmin', metavar='qmin', type=int,
-        help='set minimum (best) quality level (0..63)')
+        help='set minimum (best) video quality level (0..63)')
     parser.add_argument(
         '-qmax', metavar='qmax', type=int,
-        help='set maximum (worst) quality level (0..63)')
+        help='set maximum (worst) video quality level (0..63)')
     parser.add_argument(
         '-vs', metavar='videostream',
         help='video stream number to use (default: best)\n'
@@ -331,10 +356,22 @@ def process_options(verinfo):
     parser.add_argument(
         '-an', action='store_true',
         help='do not include audio to the output file\n'
-             'you cannot use -an with -ab, -aa, -as, -af options')
+             'you cannot use -an with -ab, -aq, -aa, -as, -af options')
+    parser.add_argument(
+        '-opus', action='store_true', default=None,
+        help='use Opus codec for audio\n'
+             'default unless -vp8 or -vorbis are also given')
+    parser.add_argument(
+        '-vorbis', action='store_false', dest='opus', default=None,
+        help='use Vorbis codec for audio\n')
     parser.add_argument(
         '-ab', metavar='bitrate', type=int,
-        help='audio bitrate in kbits (default: 64)')
+        help='opus audio bitrate in kbits (default: 64)\n'
+             'you cannot use -ab with -vorbis')
+    parser.add_argument(
+        '-aq', metavar='quality', type=int,
+        help='vorbis audio quality, -1..10 (default: 0)\n'
+             'you cannot use -aq with -opus')
     parser.add_argument(
         '-aa', metavar='audiofile',
         help='add (use) external audio file\n'
@@ -426,12 +463,12 @@ def process_options(verinfo):
             parser.error('-l and -vb are mutually exclusive')
         if options.vb < 0:
             parser.error('invalid video bitrate')
-    if options.crf is not None and (options.crf < 0 or options.crf > 63):
-        parser.error('quality level must be in 0..63 range')
-    if options.qmin is not None and (options.qmin < 0 or options.qmin > 63):
-        parser.error('quality level must be in 0..63 range')
-    if options.qmax is not None and (options.qmax < 0 or options.qmax > 63):
-        parser.error('quality level must be in 0..63 range')
+    if options.crf is not None and not 0 <= options.crf <= 63:
+        parser.error('video quality level must be in 0..63 range')
+    if options.qmin is not None and not 0 <= options.qmin <= 63:
+        parser.error('video quality level must be in 0..63 range')
+    if options.qmax is not None and not 0 <= options.qmax <= 63:
+        parser.error('video quality level must be in 0..63 range')
     if options.qmin is not None and options.qmax is not None:
         if options.qmin > options.qmax:
             parser.error('minimum quality level greater than maximum level')
@@ -441,23 +478,39 @@ def process_options(verinfo):
         qmax = 63 if options.qmax is None else options.qmax
         if not qmin <= options.crf <= qmax:
             parser.error('qmin <= crf <= qmax relation violated')
+    if options.opus is None:
+        options.opus = not options.vp8
     if options.an:
         if (options.ab is not None or
+                options.aq is not None or
                 options.aa is not None or
                 getattr(options, 'as') is not None or
                 options.af is not None):
-            parser.error('you cannot use -an with -ab, -aa, -as, -af')
+            parser.error('you cannot use -an with -ab, -aq, -aa, -as, -af')
         # No audio, i.e. its bitrate is zero.
         options.ab = 0
     else:
-        if options.ab is None:
-            options.ab = 64
-        elif options.ab < 1:
-            # NOTE: We use audio bitrate in ``_calc_video_bitrate`` so
-            # it should be defined. Can audio bitrate be zero? Can video
-            # and audio bitrates be float? Plese send bugreport if you
-            # have some problems with that.
-            parser.error('invalid audio bitrate')
+        if options.opus:
+            if options.aq is not None:
+                parser.error('you cannot use -aq with -opus')
+            if options.ab is None:
+                options.ab = 64
+            elif options.ab < 1:
+                # NOTE: We use audio bitrate in ``_calc_video_bitrate``
+                # so it should be defined. Can audio bitrate be zero?
+                # Can video and audio bitrates be float? Plese send
+                # bugreport if you have some problems with that.
+                parser.error('invalid audio bitrate')
+        else:
+            if options.ab is not None:
+                parser.error('you cannot use -ab with -vorbis')
+            if options.aq is None:
+                options.aq = 0
+            elif not -1 <= options.aq <= 10:
+                parser.error('vorbis quality level must be in -1..10 range')
+            # We need this to calculate the target video bitrate.
+            # It's not used to encode the audio track.
+            options.ab = _vorbisq2bitrate(options.aq)
     if options.sa is None:
         if options.si is not None or options.sd is not None:
             parser.error('you have not specified -sa')
@@ -856,12 +909,21 @@ def _encode(options, firstpass):
     if options.mn:
         args += ['-map_metadata', '-1']
 
+    # Misc.
+    args += ['-pass', passn, '-passlogfile', logfile, '-sn']
+
     # Video.
+    if options.vp8:
+        # TODO: Slices?
+        args += ['-c:v', 'libvpx', '-quality', 'good','-cpu-used', '0']
+    else:
+        args += [
+            '-c:v', 'libvpx-vp9', '-speed', speed,
+            '-tile-columns', '6', '-frame-parallel', '1',
+        ]
+    # XXX: Does VP8 have constant quality (vb=0)?
     args += [
-        '-pass', passn, '-passlogfile', logfile,
-        '-sn', '-c:v', 'libvpx-vp9', '-b:v', vb,
-        '-threads', threads, '-speed', speed,
-        '-tile-columns', '6', '-frame-parallel', '1',
+        '-b:v', vb, '-threads', threads,
         '-auto-alt-ref', '1', '-lag-in-frames', '25',
     ]
     if options.crf is not None:
@@ -914,11 +976,15 @@ def _encode(options, firstpass):
     if firstpass or options.an:
         args += ['-an']
     else:
-        args += ['-c:a', 'libopus', '-b:a', ab, '-ac', '2']
+        args += ['-ac', '2']
+        if options.opus:
+            args += ['-c:a', 'libopus', '-b:a', ab]
+        else:
+            args += ['-c:a', 'libvorbis', '-q:a', _TEXT_TYPE(options.aq)]
         if options.af is not None:
             args += ['-af', options.af]
 
-    # Misc.
+    # Raw options.
     if options.oo is not None:
         args += shlex.split(options.oo)
 

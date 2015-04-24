@@ -5,6 +5,7 @@ Yet another bikeshed to encode webm videos from CLI.
 ## Features
 
 * Encodes input video to webm container with VP9 and Opus
+* Optional VP8/Vorbis mode
 * Uses 2-pass encoding with the [settings](http://wiki.webmproject.org/ffmpeg/vp9-encoding-guide) recommended by the developers
 * Fits output file to the size limit by default
 * Allows to select video/audio streams and external audio track
@@ -68,6 +69,9 @@ python webm.py -i in.mkv -crf 20 -vb 600
 
 # Constant quality
 python webm.py -i in.mkv -crf 20 -vb 0
+
+# Encode with VP8 & Vorbis:
+python {title} -i in.mkv -vp8
 ```
 
 ### Interactive mode
