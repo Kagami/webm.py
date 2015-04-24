@@ -760,9 +760,9 @@ def print_interactive_help():
     lua-settings directory (see <http://mpv.io/manual/stable/#configuration>):
 
     # This is the defaults:
-    crop_alpha = 180  # Transparency of crop area
-    crop_x_step = 2   # Precision of crop area adjusting from the keyboard
-    crop_y_step = 2   # Precision of crop area adjusting from the keyboard
+    crop_alpha=180  # Transparency of crop area
+    crop_x_step=2   # Precision of crop area adjusting from the keyboard
+    crop_y_step=2   # Precision of crop area adjusting from the keyboard
     """
     doc = '{}\n\n{}'.format(
         _doc2help(run_interactive_mode.__doc__),
