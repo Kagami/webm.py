@@ -76,6 +76,11 @@ Pass `-p` flag to interactively select cut frargment/crop area with mpv. Demo:
 
 [![](https://i.imgur.com/JIogF33.png)](https://i.imgur.com/GjDWq3X.png)
 
+Show help on interactive mode:
+```bash
+python webm.py -hi
+```
+
 ## License
 
 webm.py - encode webm videos
