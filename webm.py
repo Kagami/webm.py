@@ -313,27 +313,27 @@ def process_options(verinfo):
         help='use given fake ending time to calculate the bitrate\n'
              'position may be either in seconds or in "hh:mm:ss[.xxx]" form')
     parser.add_argument(
-        '-ow', metavar='width', type=int,
-        help='output width, e.g. 1280\n'
-             'when overriding either the default width or height, the output\n'
-             'will be scaled to the correct aspect ratio, but not when you\n'
-             'override both.')
-    parser.add_argument(
-        '-oh', metavar='height', type=int,
-        help='output height, e.g. 720')
-    parser.add_argument(
-        '-sws', metavar='algo', default='lanczos',
-        help='scaling algorithm (default: %(default)s)')
-    parser.add_argument(
-        '-l', metavar='size', type=float,
-        help='filesize limit in mebibytes (default: 8)\n'
+        '-l', metavar='limit', type=float,
+        help='target filesize limit in mebibytes (default: 8)\n'
              '-l and -vb are mutually exclusive')
     parser.add_argument(
         '-vp8', action='store_true',
         help='use VP8 codec for video, implies -vorbis')
     parser.add_argument(
+        '-vw', metavar='width', type=int,
+        help='output video width in pixels, e.g. 1280\n'
+             'when overriding either the default width or height, the output\n'
+             'will be scaled to the correct aspect ratio, but not when you\n'
+             'override both.')
+    parser.add_argument(
+        '-vh', metavar='height', type=int,
+        help='output video height, e.g. 720')
+    parser.add_argument(
+        '-sws', metavar='algo', default='lanczos',
+        help='scaling algorithm (default: %(default)s)')
+    parser.add_argument(
         '-vb', metavar='bitrate', type=int,
-        help='video bitrate in kbits')
+        help='target video bitrate in kbits')
     parser.add_argument(
         '-crf', metavar='crf', type=int,
         help='set the video quality level (0..63)')
@@ -366,11 +366,11 @@ def process_options(verinfo):
         help='use Vorbis codec for audio\n')
     parser.add_argument(
         '-ab', metavar='bitrate', type=int,
-        help='opus audio bitrate in kbits (default: 64)\n'
+        help='Opus audio bitrate in kbits (default: 64)\n'
              'you cannot use -ab with -vorbis')
     parser.add_argument(
         '-aq', metavar='quality', type=int,
-        help='vorbis audio quality, -1..10 (default: 0)\n'
+        help='Vorbis audio quality, -1..10 (default: 0)\n'
              'you cannot use -aq with -opus')
     parser.add_argument(
         '-aa', metavar='audiofile',
@@ -406,9 +406,9 @@ def process_options(verinfo):
         help='run player (mpv) in interactive mode to cut and crop video\n'
              'you cannot use -p with -ss, -t, -to options')
     parser.add_argument(
-        '-poo', metavar='mpvopts',
+        '-po', metavar='mpvopts',
         help='additional raw player (mpv) options\n'
-             "example: -poo='--no-config' (equal sign is mandatory)")
+             "example: -po='--mute' (equal sign is mandatory)")
     parser.add_argument(
         '-mt', metavar='metatitle',
         help='set title of output file (default: title of input video)')
@@ -420,13 +420,13 @@ def process_options(verinfo):
         help='strip metadata from the output file\n'
              'you cannot use -mn with -mt, -mc')
     parser.add_argument(
-        '-oo', metavar='ffmpegopts',
+        '-fo', metavar='ffmpegopts',
         help='additional raw FFmpeg options\n'
-             "example: -oo='-aspect 16:9' (equal sign is mandatory)")
+             "example: -fo='-aspect 16:9' (equal sign is mandatory)")
     parser.add_argument(
-        '-ooi', metavar='ffmpegopts',
+        '-foi', metavar='ffmpegopts',
         help='raw FFmpeg options to insert before first input\n'
-             "example: -ooi='-loop 1' (equal sign is mandatory)")
+             "example: -foi='-loop 1' (equal sign is mandatory)")
     parser.add_argument(
         '-cn', action='store_true',
         help='skip any dependency/version checkings\n'
@@ -650,8 +650,8 @@ def run_interactive_mode(options):
 
     # Disabling OSC since it conflicts with interactive mode.
     args = ['--no-osc', '--msg-level', 'all=error', '--script', luafile]
-    if options.poo is not None:
-        args += shlex.split(options.poo)
+    if options.po is not None:
+        args += shlex.split(options.po)
     args += [options.infile]
     print('Running interactive mode.\n', file=sys.stderr)
     print(_doc2help(run_interactive_mode.__doc__), file=sys.stderr)
@@ -898,8 +898,8 @@ def _encode(options, firstpass):
     args = ['-hide_banner']
     if options.ss is not None:
         args += ['-ss', options.ss]
-    if options.ooi is not None:
-        args += shlex.split(options.ooi)
+    if options.foi is not None:
+        args += shlex.split(options.foi)
     args += ['-i', options.infile]
     if options.aa is not None:
         args += ['-i', options.aa]
@@ -945,11 +945,11 @@ def _encode(options, firstpass):
     vfilters = []
     if options.vfi is not None:
         vfilters += [options.vfi]
-    if options.ow is not None or options.oh is not None:
+    if options.vw is not None or options.vh is not None:
         scale='scale='
-        scale += '-1' if options.ow is None else _TEXT_TYPE(options.ow)
+        scale += '-1' if options.vw is None else _TEXT_TYPE(options.vw)
         scale += ':'
-        scale += '-1' if options.oh is None else _TEXT_TYPE(options.oh)
+        scale += '-1' if options.vh is None else _TEXT_TYPE(options.vh)
         vfilters += [scale]
         args += ['-sws_flags', options.sws]
     if options.sa is not None:
@@ -1004,8 +1004,8 @@ def _encode(options, firstpass):
                 args += ['-metadata', 'creation_time={}'.format(ctime)]
 
     # Raw options.
-    if options.oo is not None:
-        args += shlex.split(options.oo)
+    if options.fo is not None:
+        args += shlex.split(options.fo)
 
     # Output.
     args += ['-f', 'webm', '-y', outfile]
