@@ -410,8 +410,15 @@ def process_options(verinfo):
         help='additional raw player (mpv) options\n'
              "example: -poo='--no-config' (equal sign is mandatory)")
     parser.add_argument(
+        '-mt', metavar='metatitle',
+        help='set title of output file (default: title of input video)')
+    parser.add_argument(
+        '-mc', action='store_true',
+        help='add creation time to the output file')
+    parser.add_argument(
         '-mn', action='store_true',
-        help='strip metadata from the output file')
+        help='strip metadata from the output file\n'
+             'you cannot use -mn with -mt, -mc')
     parser.add_argument(
         '-oo', metavar='ffmpegopts',
         help='additional raw FFmpeg options\n'
@@ -519,6 +526,9 @@ def process_options(verinfo):
                 options.t is not None or
                 options.to is not None):
             parser.error('you cannot use -p with -ss, -t, -to options')
+    if options.mn:
+        if options.mt is not None or options.mc:
+            parser.error('you cannot use -mn with -mt, -mc')
     return options
 
 
@@ -906,8 +916,6 @@ def _encode(options, firstpass):
         astream = getattr(options, 'as')
         astream = 'a:0' if astream is None else astream
         args += ['-map', '{}:{}'.format(ainput, astream)]
-    if options.mn:
-        args += ['-map_metadata', '-1']
 
     # Misc.
     args += ['-pass', passn, '-passlogfile', logfile, '-sn']
@@ -983,6 +991,17 @@ def _encode(options, firstpass):
             args += ['-c:a', 'libvorbis', '-q:a', _TEXT_TYPE(options.aq)]
         if options.af is not None:
             args += ['-af', options.af]
+
+    # Metadata.
+    if not firstpass:
+        if options.mn:
+            args += ['-map_metadata', '-1']
+        else:
+            if options.mt is not None:
+                args += ['-metadata', 'title={}'.format(options.mt)]
+            if options.mc:
+                ctime = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+                args += ['-metadata', 'creation_time={}'.format(ctime)]
 
     # Raw options.
     if options.oo is not None:
