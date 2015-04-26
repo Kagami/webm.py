@@ -85,6 +85,14 @@ Show help on interactive mode:
 python webm.py -hi
 ```
 
+## Breaking changes policy
+
+Versions from 0.y.0 (inclusively) till 0.y+1.0 (exclusively) keep backward compatibility of options and settings.
+
+Versions from x.0.0 (inclusively) till x+1.0.0 (exclusively) keep backward compatibility of options and settings.
+
+Raising the minimal required version of dependency is not considered as breaking change. Adding new required dependency is breaking change.
+
 ## License
 
 webm.py - encode webm videos
