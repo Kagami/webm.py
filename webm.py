@@ -280,7 +280,7 @@ def process_options(verinfo):
         '-v', action='store_true', dest='verbose',
         help='Enable verbose mode')
     parser.add_argument(
-        '-i', dest='infile', metavar='infile',
+        '-i', dest='infile', metavar='infile', required=True,
         help='input file, e.g. infile.mkv (required)')
     parser.add_argument(
         'outfile', nargs='?',
@@ -437,14 +437,6 @@ def process_options(verinfo):
     # possible weird uses. E.g. ow, oh, si can be zero or negative; vs,
     # as can be arbitrary.
     options = parser.parse_args(ARGS)
-    if options.help_imode:
-        print_interactive_help()
-        sys.exit()
-    elif options.infile is None:
-        # Seems like argparse doesn't allow multiple "help" arguments so
-        # we define -i as not required, but in fact it's required for
-        # everything except the help.
-        parser.error('the following arguments are required: -i')
     if options.outfile is None:
         if options.infile[-5:] == '.webm':
             # Don't overwrite input file.
@@ -1078,6 +1070,9 @@ def main():
     try:
         if '-cn' not in ARGS:
             verinfo = check_dependencies()
+        if '-hi' in ARGS or '--help-imode' in ARGS:
+            print_interactive_help()
+            sys.exit()
         options = process_options(verinfo)
         if options.p:
             run_interactive_mode(options)
