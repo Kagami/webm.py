@@ -89,7 +89,7 @@ python webm.py -hi
 
 Versions from 0.y.0 (inclusively) till 0.y+1.0 (exclusively) keep backward compatibility of options and settings.
 
-Versions from x.0.0 (inclusively) till x+1.0.0 (exclusively) keep backward compatibility of options and settings.
+Versions from x.0.0 (inclusively) till x+1.0.0 (exclusively) keep backward compatibility of options and settings where x > 0.
 
 Raising the minimal required version of dependency is not considered as breaking change. Adding new required dependency is breaking change.
 
