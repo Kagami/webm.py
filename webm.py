@@ -741,6 +741,8 @@ def run_interactive_mode(options):
             if crop:
                 options.vfi = crop[0] if options.vfi is None \
                     else '{},{}'.format(options.vfi, crop[0])
+            if 'si' in info and 'sa' not in info:
+                info['sa'] = True
             options.__dict__.update(info)
         else:
             sys.exit(1)
