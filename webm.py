@@ -410,6 +410,11 @@ def process_options(verinfo):
         help='additional raw player (mpv) options\n'
              "example: -po='--mute' (equal sign is mandatory)")
     parser.add_argument(
+        '-cover', action='store_true',
+        help='enable album cover mode (encode song with album art)\n'
+             'first input should be image, -aa must be provided\n'
+             'you cannot use -cover with -sa, -p')
+    parser.add_argument(
         '-mt', metavar='metatitle',
         help='set title of output file (default: title of input video)')
     parser.add_argument(
@@ -518,6 +523,12 @@ def process_options(verinfo):
                 options.t is not None or
                 options.to is not None):
             parser.error('you cannot use -p with -ss, -t, -to options')
+    if options.cover:
+        if options.aa is None:
+            parser.error('audio file must be provided for cover mode')
+        # TODO: Probably we should also restrict most other options.
+        if options.sa is not None or options.p:
+            parser.error('you cannot use -cover with -sa, -p')
     if options.mn:
         if options.mt is not None or options.mc:
             parser.error('you cannot use -mn with -mt, -mc')
@@ -695,7 +706,7 @@ def run_interactive_mode(options):
 
     # NOTE: We don't mind checking cut ranges and crop values because:
     # 1) It should be already checked in Lua script
-    # 2) We will check some of them anyway in ``_get_durations``
+    # 2) We will check some of them anyway in ``_get_input_info``
     print('='*50, file=sys.stderr)
     if cut:
         # ``-1`` is a special value and defines start/end of the file.
@@ -772,12 +783,17 @@ def print_interactive_help():
     print(doc, file=sys.stderr)
 
 
-def _get_durations(options):
+def _get_input_info(options):
+    infile = options.aa if options.cover else options.infile
+    # NOTE: Better to use ffprobe(1) configurable output like suggested
+    # here: <http://stackoverflow.com/a/22243834>, but it brings its own
+    # disadvantage: we must be sure target system has `ffprobe`
+    # executable too.
     out = _ffmpeg_output(
-        ['-hide_banner', '-i', options.infile],
+        ['-hide_banner', '-i', infile],
         check_code=False)['stderr']
     try:
-        dur = re.search(r'^\s+Duration: ([^,]+)', out, re.MULTILINE).group(1)
+        dur = re.search(r'^\s*Duration:\s*([^,]+)', out, re.MULTILINE).group(1)
     except Exception:
         raise Exception('failed to parse duration of input file')
     else:
@@ -833,10 +849,24 @@ def _get_durations(options):
     else:
         foutduration = outduration
 
+    # Metadata.
+    intitle = ''
+    title = re.search(
+        r'^\s*title\s*:\s*(.+)$', out,
+        re.MULTILINE|re.IGNORECASE)
+    if title:
+        intitle = title.group(1)
+    album = re.search(
+        r'^\s*album\s*:\s*(.+)$', out,
+        re.MULTILINE|re.IGNORECASE)
+    if album and intitle:
+        intitle = '{} - {}'.format(album.group(1), intitle)
+
     return {
         'induration': induration,
         'outduration': outduration,
         'foutduration': foutduration,
+        'intitle': intitle,
     }
 
 
@@ -890,12 +920,14 @@ def _encode(options, firstpass):
     args = ['-hide_banner']
     if options.ss is not None:
         args += ['-ss', options.ss]
+    if options.cover:
+        args += ['-r', '1', '-loop', '1']
     if options.foi is not None:
         args += shlex.split(options.foi)
     args += ['-i', options.infile]
     if options.aa is not None:
         args += ['-i', options.aa]
-    if options.t is not None or options.to is not None:
+    if options.t is not None or options.to is not None or options.cover:
         args += ['-t', _TEXT_TYPE(options.outduration)]
 
     # Streams.
@@ -991,6 +1023,8 @@ def _encode(options, firstpass):
         else:
             if options.mt is not None:
                 args += ['-metadata', 'title={}'.format(options.mt)]
+            elif options.cover and options.intitle:
+                args += ['-metadata', 'title={}'.format(options.intitle)]
             if options.mc:
                 ctime = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
                 args += ['-metadata', 'creation_time={}'.format(ctime)]
@@ -1007,7 +1041,7 @@ def _encode(options, firstpass):
 
 def encode(options):
     import multiprocessing
-    options.__dict__.update(_get_durations(options))
+    options.__dict__.update(_get_input_info(options))
     if options.outfile is None:
         options.outfile = _get_output_filename(options)
     if options.vb is None:
@@ -1015,6 +1049,8 @@ def encode(options):
     options.threads = multiprocessing.cpu_count()
     logfh, options.logfile = tempfile.mkstemp(suffix='-0.log')
     os.close(logfh)
+    # NOTE: 2-pass encoding in cover mode may be faster than 1-pass.
+    # Though we may add option to use only single pass in future.
     _encode(options, firstpass=True)
     _encode(options, firstpass=False)
 
