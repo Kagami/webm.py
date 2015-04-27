@@ -1047,6 +1047,10 @@ def encode(options):
     if options.vb is None:
         options.vb = _calc_video_bitrate(options)
     options.threads = multiprocessing.cpu_count()
+    # NOTE: Py3 always returns unicode for the second parameter, Py2
+    # returns bytes with bytes suffix/without suffix and unicode with
+    # unicode suffix. Since we use unicode_literals and provide suffix,
+    # it should always be unicode.
     logfh, options.logfile = tempfile.mkstemp(suffix='-0.log')
     os.close(logfh)
     # NOTE: 2-pass encoding in cover mode may be faster than 1-pass.
