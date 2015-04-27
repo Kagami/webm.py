@@ -793,7 +793,7 @@ def _get_input_info(options):
         ['-hide_banner', '-i', infile],
         check_code=False)['stderr']
     try:
-        dur = re.search(r'^\s*Duration:\s*([^,]+)', out, re.MULTILINE).group(1)
+        dur = re.search(r'^\s+Duration: ([^,]+)', out, re.MULTILINE).group(1)
     except Exception:
         raise Exception('failed to parse duration of input file')
     else:
