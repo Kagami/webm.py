@@ -261,6 +261,11 @@ def _vorbisq2bitrate(q):
         10: 500,
     }[q]
 
+
+def _get_main_infile(options):
+    return options.aa if options.cover else options.infile
+
+
 def process_options(verinfo):
     import argparse
     doc = __doc__.format(stitle=__stitle__, title=__title__, **verinfo)
@@ -442,15 +447,6 @@ def process_options(verinfo):
     # possible weird uses. E.g. ow, oh, si can be zero or negative; vs,
     # as can be arbitrary.
     options = parser.parse_args(ARGS)
-    if options.outfile is None:
-        if options.infile[-5:] == '.webm':
-            # Don't overwrite input file.
-            # NOTE: Input file can be in other directory or -ss/-t/-to
-            # is specified so default output name will be different but
-            # for now we don't bother checking this.
-            parser.error('specify output file please')
-    elif _is_same_paths(options.infile, options.outfile):
-        parser.error('specify another output file please')
     if options.t is not None and options.to is not None:
         parser.error('-t and -to are mutually exclusive')
     if ((options.tt is not None and options.vb is not None) or
@@ -532,6 +528,16 @@ def process_options(verinfo):
     if options.mn:
         if options.mt is not None or options.mc:
             parser.error('you cannot use -mn with -mt, -mc')
+    infile = _get_main_infile(options)
+    if options.outfile is None:
+        if infile[-5:] == '.webm':
+            # Don't overwrite input file.
+            # NOTE: Input file can be in other directory or -ss/-t/-to
+            # is specified so default output name will be different but
+            # for now we don't bother checking this.
+            parser.error('specify output file please')
+    elif _is_same_paths(infile, options.outfile):
+        parser.error('specify another output file please')
     return options
 
 
@@ -784,7 +790,7 @@ def print_interactive_help():
 
 
 def _get_input_info(options):
-    infile = options.aa if options.cover else options.infile
+    infile = _get_main_infile(options)
     # NOTE: Better to use ffprobe(1) configurable output like suggested
     # here: <http://stackoverflow.com/a/22243834>, but it brings its own
     # disadvantage: we must be sure target system has `ffprobe`
@@ -871,7 +877,8 @@ def _get_input_info(options):
 
 
 def _get_output_filename(options):
-    name = os.path.basename(options.infile)
+    infile = _get_main_infile(options)
+    name = os.path.basename(infile)
     name = os.path.splitext(name)[0]
     if (options.ss is not None or
             options.t is not None or
