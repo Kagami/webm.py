@@ -943,12 +943,16 @@ def _encode(options, firstpass):
     if (options.vs is not None or
             getattr(options, 'as') is not None or
             options.aa is not None):
-        vstream = 'v:0' if options.vs is None else options.vs
-        args += ['-map', '0:{}'.format(vstream)]
+        vstream = 'v:0' if options.vs is None else _TEXT_TYPE(options.vs)
+        if not vstream.startswith('['):
+            vstream = '0:{}'.format(vstream)
+        args += ['-map', vstream]
         ainput = 0 if options.aa is None else 1
         astream = getattr(options, 'as')
-        astream = 'a:0' if astream is None else astream
-        args += ['-map', '{}:{}'.format(ainput, astream)]
+        astream = 'a:0' if astream is None else _TEXT_TYPE(astream)
+        if not astream.startswith('['):
+            astream = '{}:{}'.format(ainput, astream)
+        args += ['-map', astream]
 
     # Misc.
     args += ['-pass', passn, '-passlogfile', logfile, '-sn']
