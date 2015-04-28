@@ -263,7 +263,7 @@ def _vorbisq2bitrate(q):
 
 
 def _get_main_infile(options):
-    return options.aa if options.cover else options.infile
+    return options.infile if options.cover is None else options.aa
 
 
 def process_options(verinfo):
@@ -415,9 +415,10 @@ def process_options(verinfo):
         help='additional raw player (mpv) options\n'
              "example: -po='--mute' (equal sign is mandatory)")
     parser.add_argument(
-        '-cover', action='store_true',
+        '-cover', metavar='loopopts', const=True, nargs='?',
         help='enable album cover mode (encode song with album art)\n'
              'first input should be image, -aa must be provided\n'
+             'by default -r 1 -loop 1 is used but you can override this\n'
              'you cannot use -cover with -sa, -p')
     parser.add_argument(
         '-mt', metavar='metatitle',
@@ -519,7 +520,7 @@ def process_options(verinfo):
                 options.t is not None or
                 options.to is not None):
             parser.error('you cannot use -p with -ss, -t, -to options')
-    if options.cover:
+    if options.cover is not None:
         if options.aa is None:
             parser.error('audio file must be provided for cover mode')
         # TODO: Probably we should also restrict most other options.
@@ -929,14 +930,19 @@ def _encode(options, firstpass):
     args = ['-hide_banner']
     if options.ss is not None:
         args += ['-ss', options.ss]
-    if options.cover:
-        args += ['-r', '1', '-loop', '1']
+    if options.cover is not None:
+        if options.cover is True:
+            args += ['-r', '1', '-loop', '1']
+        else:
+            args += shlex.split(options.cover)
     if options.foi is not None:
         args += shlex.split(options.foi)
     args += ['-i', options.infile]
     if options.aa is not None:
         args += ['-i', options.aa]
-    if options.t is not None or options.to is not None or options.cover:
+    if (options.t is not None or
+            options.to is not None or
+            options.cover is not None):
         args += ['-t', _TEXT_TYPE(options.outduration)]
 
     # Streams.
@@ -1036,7 +1042,7 @@ def _encode(options, firstpass):
         else:
             if options.mt is not None:
                 args += ['-metadata', 'title={}'.format(options.mt)]
-            elif options.cover and options.intitle:
+            elif options.cover is not None and options.intitle:
                 args += ['-metadata', 'title={}'.format(options.intitle)]
             if options.mc:
                 ctime = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
