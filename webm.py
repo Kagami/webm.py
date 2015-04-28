@@ -439,6 +439,10 @@ def process_options(verinfo):
         help='raw FFmpeg options to insert before first input\n'
              "example: -foi='-loop 1' (equal sign is mandatory)")
     parser.add_argument(
+        '-foi2', metavar='ffmpegopts',
+        help='raw FFmpeg options to insert after first input\n'
+             "example: -foi2='-ss 10' (equal sign is mandatory)")
+    parser.add_argument(
         '-cn', action='store_true',
         help='skip any dependency/version checkings\n'
              'advanced option, use at your own risk')
@@ -938,6 +942,8 @@ def _encode(options, firstpass):
     if options.foi is not None:
         args += shlex.split(options.foi)
     args += ['-i', options.infile]
+    if options.foi2 is not None:
+        args += shlex.split(options.foi2)
     if options.aa is not None:
         args += ['-i', options.aa]
     if (options.t is not None or
