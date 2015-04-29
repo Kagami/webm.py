@@ -36,8 +36,8 @@ examples:
   - encode with VP8 & Vorbis:   python {title} -i in.mkv -vp8
 
 use custom location of FFmpeg executable:
-  - *nix:    FFMPEG=/opt/ffmpeg/ffmpeg python {title} -i in.mkv
-  - Windows: set FFMPEG=C:\\ffmpeg.exe & python {title} -i in.mkv
+  - *nix:    WEBM_FFMPEG=/opt/ffmpeg/ffmpeg python {title} -i in.mkv
+  - Windows: set WEBM_FFMPEG=C:\\ffmpeg.exe & python {title} -i in.mkv
 """
 
 # TODO:
@@ -95,11 +95,11 @@ if _PY2: ARGS = [arg.decode(OS_ENCODING) for arg in ARGS]
 
 
 # Python3 returns unicode here fortunately.
-FFMPEG_PATH = os.getenv('FFMPEG', 'ffmpeg')
+FFMPEG_PATH = os.getenv('WEBM_FFMPEG', 'ffmpeg')
 if _PY2: FFMPEG_PATH = FFMPEG_PATH.decode(OS_ENCODING)
 
 
-MPV_PATH = os.getenv('MPV', 'mpv')
+MPV_PATH = os.getenv('WEBM_MPV', 'mpv')
 if _PY2: MPV_PATH = MPV_PATH.decode(OS_ENCODING)
 
 
