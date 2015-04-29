@@ -974,13 +974,19 @@ def _encode(options, firstpass):
         # TODO: Slices?
         args += ['-c:v', 'libvpx', '-speed', '0']
     else:
-        # XXX: -tile-columns value might be clueless or even bad. See
-        # <http://permalink.gmane.org/gmane.comp.multimedia.webm.devel/2339>
-        # for details.
-        args += ['-c:v', 'libvpx-vp9', '-speed', speed, '-tile-columns', '6']
+        # XXX: tile-columns value might be clueless or even bad. See
+        # <http://permalink.gmane.org/gmane.comp.multimedia.webm.devel/2339>.
+        # frame-parallel should be disabled, see
+        # <http://permalink.gmane.org/gmane.comp.multimedia.webm.devel/2359>.
+        args += [
+            '-c:v', 'libvpx-vp9', '-speed', speed,
+            '-tile-columns', '6', '-frame-parallel', '0',
+        ]
     # XXX: Does VP8 have constant quality (vb=0)?
     args += [
         '-b:v', vb, '-threads', threads,
+        # These are the defaults in libvpx 1.4.0 but won't harm:
+        # it may help if they decide to change them.
         '-auto-alt-ref', '1', '-lag-in-frames', '25',
     ]
     if options.crf is not None:
