@@ -971,8 +971,9 @@ def _encode(options, firstpass):
 
     # Video.
     if options.vp8:
+        # VP8 is fast enough to use -speed=0 for both passes.
         # TODO: Slices?
-        args += ['-c:v', 'libvpx', '-quality', 'good','-cpu-used', '0']
+        args += ['-c:v', 'libvpx', '-speed', '0']
     else:
         # XXX: -tile-columns value might be clueless or even bad. See
         # <http://permalink.gmane.org/gmane.comp.multimedia.webm.devel/2339>
