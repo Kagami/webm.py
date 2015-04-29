@@ -1,10 +1,10 @@
 # webm.py
 
-Yet another bikeshed to encode webm videos from CLI.
+Yet another bikeshed to encode WebM videos from CLI.
 
 ## Features
 
-* Encodes input video to webm container with VP9 and Opus
+* Encodes input video to WebM container with VP9 and Opus
 * Uses 2-pass encoding, has optional VP8/Vorbis and album art modes
 * Fits output file to the size limit by default
 * Allows to select video/audio streams and external audio track
@@ -94,7 +94,7 @@ Raising the minimal required version of dependency is not considered as breaking
 
 ## License
 
-webm.py - encode webm videos
+webm.py - encode WebM videos
 
 Written in 2015 by Kagami Hiiragi <kagami@genshiken.org>
 

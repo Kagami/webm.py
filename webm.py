@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 """
-convert videos to webm format using FFmpeg
+convert videos to WebM format using FFmpeg
 
 features:
-  - encodes input video to webm container with VP9 and Opus
+  - encodes input video to WebM container with VP9 and Opus
   - uses 2-pass encoding, has optional VP8/Vorbis and album art modes
   - fits output file to the size limit by default
   - allows to select video/audio streams and external audio track

@@ -18,7 +18,7 @@ setup(
     author='Kagami Hiiragi',
     author_email='kagami@genshiken.org',
     url='https://github.com/Kagami/webm.py',
-    description='Encode webm videos',
+    description='Encode WebM videos',
     long_description=long_description,
     license='CC0',
     py_modules=['webm'],
