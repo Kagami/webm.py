@@ -974,10 +974,10 @@ def _encode(options, firstpass):
         # TODO: Slices?
         args += ['-c:v', 'libvpx', '-quality', 'good','-cpu-used', '0']
     else:
-        args += [
-            '-c:v', 'libvpx-vp9', '-speed', speed,
-            '-tile-columns', '6', '-frame-parallel', '1',
-        ]
+        # XXX: -tile-columns value might be clueless or even bad. See
+        # <http://permalink.gmane.org/gmane.comp.multimedia.webm.devel/2339>
+        # for details.
+        args += ['-c:v', 'libvpx-vp9', '-speed', speed, '-tile-columns', '6']
     # XXX: Does VP8 have constant quality (vb=0)?
     args += [
         '-b:v', vb, '-threads', threads,
