@@ -5,8 +5,7 @@ Yet another bikeshed to encode webm videos from CLI.
 ## Features
 
 * Encodes input video to webm container with VP9 and Opus
-* Optional VP8/Vorbis mode
-* Uses 2-pass encoding with the [settings](http://wiki.webmproject.org/ffmpeg/vp9-encoding-guide) recommended by the developers
+* Uses 2-pass encoding, has optional VP8/Vorbis and album art modes
 * Fits output file to the size limit by default
 * Allows to select video/audio streams and external audio track
 * Can burn subtitles into the video
