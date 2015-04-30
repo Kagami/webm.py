@@ -984,7 +984,7 @@ def _encode(options, firstpass):
         ]
     # XXX: Does VP8 have constant quality (vb=0)?
     args += [
-        '-b:v', vb, '-threads', threads,
+        '-b:v', vb, '-threads', threads, '-pix_fmt', '+yuv420p',
         # These are the defaults in libvpx 1.4.0 but won't harm:
         # it may help if they decide to change them.
         '-auto-alt-ref', '1', '-lag-in-frames', '25',
