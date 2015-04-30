@@ -1005,8 +1005,9 @@ def _encode(options, firstpass):
         scale += '-1' if options.vw is None else _TEXT_TYPE(options.vw)
         scale += ':'
         scale += '-1' if options.vh is None else _TEXT_TYPE(options.vh)
+        scale += ':flags='
+        scale += options.sws
         vfilters += [scale]
-        args += ['-sws_flags', options.sws]
     if options.sa is not None:
         sub_delay = 0
         if options.ss is not None:
