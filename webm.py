@@ -974,9 +974,9 @@ def _encode(options, firstpass):
         # TODO: Slices?
         args += ['-c:v', 'libvpx', '-speed', '0']
     else:
-        # XXX: tile-columns value might be clueless or even bad. See
+        # tile-columns=6 by default but won't harm. See also:
         # <http://permalink.gmane.org/gmane.comp.multimedia.webm.devel/2339>.
-        # frame-parallel should be disabled, see
+        # frame-parallel should be disabled, see:
         # <http://permalink.gmane.org/gmane.comp.multimedia.webm.devel/2359>.
         args += [
             '-c:v', 'libvpx-vp9', '-speed', speed,
