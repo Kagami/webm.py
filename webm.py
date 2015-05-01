@@ -358,6 +358,9 @@ def process_options(verinfo):
         '-vfi', metavar='videofilters',
         help='insert video filters at the start of filter chain')
     parser.add_argument(
+        '-lavfi', metavar='filtergraph',
+        help='define a complex filtergraph')
+    parser.add_argument(
         '-an', action='store_true',
         help='do not include audio to the output file\n'
              'you cannot use -an with -ab, -aq, -aa, -as, -af options')
@@ -1035,6 +1038,8 @@ def _encode(options, firstpass):
         vfilters += [options.vf]
     if vfilters:
         args += ['-vf', ','.join(vfilters)]
+    if options.lavfi is not None:
+        args += ['-lavfi', options.lavfi]
 
     # Audio.
     if firstpass or options.an:
