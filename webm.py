@@ -970,6 +970,8 @@ def _encode(options, firstpass):
 
     # Misc.
     args += ['-pass', passn, '-passlogfile', logfile, '-sn']
+    if options.verbose:
+        args += ['-loglevel', 'verbose']
 
     # Video.
     if options.vp8:
