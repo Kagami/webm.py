@@ -225,6 +225,7 @@ def check_dependencies():
                     raise Exception('mpv version must be 0.8+, '
                                     'using: {}'.format(mpvv))
             else:
+                # Most probably version from git. Do nothing.
                 pass
 
     return {'pythonv': pythonv, 'ffmpegv': ffmpegv, 'mpvv': mpvv}
@@ -989,10 +990,14 @@ def _encode(options, firstpass):
         ]
     # XXX: Does VP8 have constant quality (vb=0)?
     args += [
-        '-b:v', vb, '-threads', threads, '-pix_fmt', '+yuv420p',
+        '-b:v', vb, '-threads', threads,
         # These are the defaults in libvpx 1.4.0 but won't harm:
         # it may help if they decide to change them.
         '-auto-alt-ref', '1', '-lag-in-frames', '25',
+        # Using other subsamplings require profile>0 which support
+        # across various decoders is still poor. User may still redefine
+        # this via ``-fo``.
+        '-pix_fmt', '+yuv420p',
     ]
     if options.crf is not None:
         args += ['-crf', _TEXT_TYPE(options.crf)]
