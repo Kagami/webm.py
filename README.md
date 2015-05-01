@@ -92,6 +92,10 @@ Versions from x.0.0 (inclusively) till x+1.0.0 (exclusively) keep backward compa
 
 Raising the minimal required version of dependency is not considered as breaking change. Adding new required dependency is breaking change.
 
+## Related links
+
+[webm.py wiki](https://github.com/Kagami/webm.py/wiki) contains some encoding tricks and links to documentation on WebM/VPx.
+
 ## License
 
 webm.py - encode WebM videos
