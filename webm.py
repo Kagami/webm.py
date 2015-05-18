@@ -424,8 +424,9 @@ def process_options(verinfo):
              'by default -r 1 -loop 1 is used but you can override this\n'
              'you cannot use -cover with -sa, -p')
     parser.add_argument(
-        '-mt', metavar='metatitle',
-        help='set title of output file (default: title of input video)')
+        '-mt', metavar='metatitle', const=True, nargs='?',
+        help='set title of output file (default: title of input video)\n'
+             'will use output file without extension if argument is omitted')
     parser.add_argument(
         '-mc', action='store_true',
         help='add creation time to the output file')
@@ -1066,7 +1067,11 @@ def _encode(options, firstpass):
             args += ['-map_metadata', '-1']
         else:
             if options.mt is not None:
-                args += ['-metadata', 'title={}'.format(options.mt)]
+                title = options.mt
+                if title is True:
+                    title = os.path.basename(options.outfile)
+                    title = os.path.splitext(title)[0]
+                args += ['-metadata', 'title={}'.format(title)]
             elif options.cover is not None and options.intitle:
                 args += ['-metadata', 'title={}'.format(options.intitle)]
             if options.mc:
