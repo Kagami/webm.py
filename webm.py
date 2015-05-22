@@ -395,8 +395,8 @@ def process_options(verinfo):
     parser.add_argument(
         '-sa', metavar='subfile', const=True, nargs='?',
         help='add (burn) subtitles to the video\n'
-             'will use subtitles from the given file or from the input video\n'
-             'if filename is omitted')
+             'will use subtitles from the given file or from the input\n'
+             'video if filename is omitted')
     parser.add_argument(
         '-si', metavar='subindex', type=int,
         help='subtitle index to use (default: best)\n'
@@ -426,7 +426,8 @@ def process_options(verinfo):
     parser.add_argument(
         '-mt', metavar='metatitle', const=True, nargs='?',
         help='set title of output file (default: title of input video)\n'
-             'will use output file without extension if argument is omitted')
+             'will use output filename without extension if argument\n'
+             'is omitted')
     parser.add_argument(
         '-mc', action='store_true',
         help='add creation time to the output file')
