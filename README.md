@@ -60,17 +60,14 @@ python webm.py -i in.mkv -vb 600
 # Constrained quality
 python webm.py -i in.mkv -crf 20
 
-# CQ with custom limit
-python webm.py -i in.mkv -crf 20 -l 6
-
-# CQ with custom bitrate
-python webm.py -i in.mkv -crf 20 -vb 600
-
 # Constant quality
 python webm.py -i in.mkv -crf 20 -vb 0
 
 # Encode with VP8 & Vorbis
 python webm.py -i in.mkv -vp8
+
+# Make album art video
+python {title} -cover -i pic.png -aa song.flac
 ```
 
 ### Interactive mode

@@ -3,6 +3,9 @@
 """
 convert videos to WebM format using FFmpeg
 
+Intro
+-----
+
 features:
   - encodes input video to WebM container with VP9 and Opus
   - uses 2-pass encoding, has optional VP8/Vorbis and album art modes
@@ -29,14 +32,17 @@ examples:
   - fit video to 6 MiB:         python {title} -i in.mkv -l 6
   - set video bitrate to 600k:  python {title} -i in.mkv -vb 600
   - constrained quality:        python {title} -i in.mkv -crf 20
-  - CQ with custom limit:       python {title} -i in.mkv -crf 20 -l 6
-  - CQ with custom bitrate:     python {title} -i in.mkv -crf 20 -vb 600
   - constant quality:           python {title} -i in.mkv -crf 20 -vb 0
   - encode with VP8 & Vorbis:   python {title} -i in.mkv -vp8
+  - make album art video:       python {title} -cover -i pic.png -aa song.flac
 
 use custom location of FFmpeg executable:
   - *nix:    WEBM_FFMPEG=/opt/ffmpeg/ffmpeg python {title} -i in.mkv
   - Windows: set WEBM_FFMPEG=C:\\ffmpeg.exe & python {title} -i in.mkv
+similarly you can set custom location of mpv executable with WEBM_MPV
+
+Options
+-------
 """
 
 # Since there is no way to wrap future imports in try/except, we use
@@ -337,8 +343,8 @@ def process_options(verinfo):
         help='insert video filters at the start of filter chain')
     parser.add_argument(
         '-an', action='store_true',
-        help='do not include audio to the output file\n'
-             'you cannot use -an with -ab, -aq, -aa, -as, -af options')
+        help='strip audio from the output file\n'
+             'you cannot use -an with -ab, -aq, -aa, -as, -af')
     parser.add_argument(
         '-opus', action='store_true', default=None,
         help='use Opus codec for audio\n'
@@ -375,27 +381,26 @@ def process_options(verinfo):
         '-si', metavar='subindex', type=int,
         help='subtitle index to use (default: best)\n'
              "note: it's not the global stream number, but the index of\n"
-             'subtitle stream across other subtitles; see ffmpeg-filters(1)\n'
-             'for details')
+             'subtitle stream across other subtitles')
     parser.add_argument(
         '-sd', metavar='subdelay', type=float,
         help='delay subtitles by this number of seconds\n'
-             'note that in mpv sub-delay value is actually negated,\n'
-             'i.e. sub-delay=1s in mpv actually shift subtitles backward;\n'
-             'you should pass -1 to this option to actually shift backward')
+             'note that subtitles delay in mpv is negated, i.e.\n'
+             '--sub-delay=1 in mpv actually shift subtitles backward;\n'
+             'you should pass -1 to this option to shift backward')
     parser.add_argument(
         '-p', action='store_true',
         help='run player (mpv) in interactive mode to cut and crop video\n'
-             'you cannot use -p with -ss, -t, -to options')
+             'you cannot use -p with -ss, -t, -to')
     parser.add_argument(
         '-po', metavar='mpvopts',
         help='additional raw player (mpv) options\n'
              "example: -po='--mute' (equal sign is mandatory)")
     parser.add_argument(
         '-cover', metavar='loopopts', const=True, nargs='?',
-        help='enable album cover mode (encode song with album art)\n'
+        help='enable album cover mode, encode song with album art\n'
              'first input should be image, -aa must be provided\n'
-             'by default -r 1 -loop 1 is used but you can override this\n'
+             "by default '-r 1 -loop 1' is used to loop the art\n"
              'you cannot use -cover with -sa, -p')
     parser.add_argument(
         '-mt', metavar='metatitle', const=True, nargs='?',
@@ -498,7 +503,7 @@ def process_options(verinfo):
         if (options.ss is not None or
                 options.t is not None or
                 options.to is not None):
-            parser.error('you cannot use -p with -ss, -t, -to options')
+            parser.error('you cannot use -p with -ss, -t, -to')
     if options.cover is not None:
         if options.aa is None:
             parser.error('audio file must be provided for cover mode')
