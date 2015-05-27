@@ -39,12 +39,6 @@ use custom location of FFmpeg executable:
   - Windows: set WEBM_FFMPEG=C:\\ffmpeg.exe & python {title} -i in.mkv
 """
 
-# TODO:
-#     * Better error reporting in verbose mode
-#     * Fit audio to limit
-#     * Optionally use mkvmerge for muxing
-#     * Best quality mode
-
 # Since there is no way to wrap future imports in try/except, we use
 # hack with comment. See <http://stackoverflow.com/q/388069> for
 # details.
