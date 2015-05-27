@@ -67,7 +67,7 @@ python webm.py -i in.mkv -crf 20 -vb 0
 python webm.py -i in.mkv -vp8
 
 # Make album art video
-python {title} -cover -i pic.png -aa song.flac
+python webm.py -cover -i pic.png -aa song.flac
 ```
 
 ### Interactive mode
