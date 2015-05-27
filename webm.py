@@ -426,7 +426,7 @@ def process_options(verinfo):
     parser.add_argument(
         '-foi2', metavar='ffmpegopts',
         help='raw FFmpeg options to insert after first input\n'
-             "example: -foi2='-ss 10' (equal sign is mandatory)")
+             "example: -foi2='-itsoffset 10' (equal sign is mandatory)")
     parser.add_argument(
         '-cn', action='store_true',
         help='skip any dependency/version checkings\n'
