@@ -102,13 +102,6 @@ MPV_PATH = os.getenv('WEBM_MPV', 'mpv')
 if _PY2: MPV_PATH = MPV_PATH.decode(OS_ENCODING)
 
 
-# Option ``options.tt`` can take the following values:
-# - ``None`` by default
-# - ``_FullFakeDuration`` if user skipped the value of -tt
-# - value of -tt option
-class _FullFakeDuration: pass
-
-
 def _ffmpeg(args, check_code=True, debug=False):
     args = [FFMPEG_PATH] + args
     if debug:
@@ -308,16 +301,6 @@ def process_options(verinfo):
         help='stop writing the output at position\n'
              'position may be either in seconds or in "hh:mm:ss[.xxx]" form')
     parser.add_argument(
-        '-tt', metavar='fakeduration', nargs='?', const=_FullFakeDuration,
-        help='use given fake duration to calculate the bitrate\n'
-             'duration may be either in seconds or in "hh:mm:ss[.xxx]" form\n'
-             'skip value to use the full duration of video\n'
-             '-tt, -tot and -vb are mutually exclusive')
-    parser.add_argument(
-        '-tot', metavar='fakeposition',
-        help='use given fake ending time to calculate the bitrate\n'
-             'position may be either in seconds or in "hh:mm:ss[.xxx]" form')
-    parser.add_argument(
         '-l', metavar='limit', type=float,
         help='target filesize limit in mebibytes (default: 8)\n'
              '-l and -vb are mutually exclusive')
@@ -358,9 +341,6 @@ def process_options(verinfo):
     parser.add_argument(
         '-vfi', metavar='videofilters',
         help='insert video filters at the start of filter chain')
-    parser.add_argument(
-        '-lavfi', metavar='filtergraph',
-        help='define a complex filtergraph')
     parser.add_argument(
         '-an', action='store_true',
         help='do not include audio to the output file\n'
@@ -459,10 +439,6 @@ def process_options(verinfo):
     options = parser.parse_args(ARGS)
     if options.t is not None and options.to is not None:
         parser.error('-t and -to are mutually exclusive')
-    if ((options.tt is not None and options.vb is not None) or
-            (options.tot is not None and options.vb is not None) or
-            (options.tt is not None and options.tot is not None)):
-        parser.error('-tt, -tot and -vb are mutually exclusive')
     if options.vb is None:
         if options.l is None:
             options.l = 8
@@ -844,29 +820,6 @@ def _get_input_info(options):
     else:
         outduration = induration
 
-    # Validate fake ranges.
-    if options.tt is not None:
-        if options.tt is _FullFakeDuration:
-            foutduration = induration
-        else:
-            foutduration = _parse_time(options.tt)
-            if foutduration == 0:
-                raise Exception('duration must not be zero')
-            elif foutduration > induration:
-                raise Exception('end position too far in the future')
-    elif options.tot is not None:
-        fendpos = _parse_time(options.tot)
-        foutduration = fendpos - shift
-        if fendpos > induration:
-            raise Exception(
-                'End position {} too far in the future '
-                '(input has only {} duration)'.format(options.tot, dur))
-        if fendpos <= shift:
-            raise Exception(
-                'End position is less or equal than the input seek')
-    else:
-        foutduration = outduration
-
     # Metadata.
     intitle = ''
     title = re.search(
@@ -883,7 +836,6 @@ def _get_input_info(options):
     return {
         'induration': induration,
         'outduration': outduration,
-        'foutduration': foutduration,
         'intitle': intitle,
     }
 
@@ -911,10 +863,7 @@ def _get_output_filename(options):
 
 
 def _calc_video_bitrate(options):
-    if options.tt is not None or options.tot is not None:
-        outduration = options.foutduration
-    else:
-        outduration = options.outduration
+    outduration = options.outduration
     # mebibytes * 1024 * 8 = kbits
     vbitrate = int(math.floor(options.l * 8192 / outduration - options.ab))
     if vbitrate < 1:
@@ -1047,8 +996,6 @@ def _encode(options, firstpass):
         vfilters += [options.vf]
     if vfilters:
         args += ['-vf', ','.join(vfilters)]
-    if options.lavfi is not None:
-        args += ['-lavfi', options.lavfi]
 
     # Audio.
     if firstpass or options.an:
