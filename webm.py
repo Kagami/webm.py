@@ -320,7 +320,7 @@ def process_options(verinfo):
         '-sws', metavar='algo', default='lanczos',
         help='scaling algorithm (default: %(default)s)')
     parser.add_argument(
-        '-vb', metavar='bitrate', type=int,
+        '-vb', metavar='bitrate', type=float,
         help='target video bitrate in kbits')
     parser.add_argument(
         '-crf', metavar='crf', type=int,
@@ -353,7 +353,7 @@ def process_options(verinfo):
         '-vorbis', action='store_false', dest='opus', default=None,
         help='use Vorbis codec for audio\n')
     parser.add_argument(
-        '-ab', metavar='bitrate', type=int,
+        '-ab', metavar='bitrate', type=float,
         help='Opus audio bitrate in kbits (default: 64)\n'
              'you cannot use -ab with -vorbis')
     parser.add_argument(
