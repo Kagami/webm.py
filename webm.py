@@ -940,6 +940,10 @@ def _encode(options, firstpass):
         # These are the defaults in libvpx 1.4.0 but won't harm:
         # it may help if they decide to change them.
         '-auto-alt-ref', '1', '-lag-in-frames', '25',
+        # Using other subsamplings require profile>0 which support
+        # across various decoders is still poor. User may still redefine
+        # this via ``-fo``.
+        '-pix_fmt', '+yuv420p',
     ]
     if options.crf is not None:
         args += ['-crf', _TEXT_TYPE(options.crf)]
