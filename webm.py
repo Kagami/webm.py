@@ -55,7 +55,6 @@ from __future__ import unicode_literals  # Install Python 2.7+ or 3.2+
 import os
 import re
 import sys
-import math
 import time
 import shlex
 import locale
@@ -481,10 +480,6 @@ def process_options(verinfo):
             if options.ab is None:
                 options.ab = 64
             elif options.ab < 1:
-                # NOTE: We use audio bitrate in ``_calc_video_bitrate``
-                # so it should be defined. Can audio bitrate be zero?
-                # Can video and audio bitrates be float? Plese send
-                # bugreport if you have some problems with that.
                 parser.error('invalid audio bitrate')
         else:
             if options.ab is not None:
@@ -862,16 +857,19 @@ def _get_output_filename(options):
 
 
 def _calc_video_bitrate(options):
-    outduration = options.outduration
-    # mebibytes * 1024 * 8 = kbits
-    vbitrate = int(math.floor(options.l * 8192 / outduration - options.ab))
-    if vbitrate < 1:
+    """
+    Calculate video bitrate in kilobits.
+    """
+    limit_kbits = options.l * 8 * 1024 * 1024 / 1000
+    vb = limit_kbits / options.outduration - options.ab
+    vb = int(vb * 10) / 10
+    if vb < 0.1:
         raise Exception(
             '\n\nUnable to calculate video bitrate for the given limit.\n'
             'Either limit is too low, duration of the video is too long\n'
-            'or audio bitrate is too big.\n'
+            'or audio bitrate is too high.\n'
             'Consider fixing one of this or just set bitrate manually.')
-    return vbitrate
+    return vb
 
 
 def _encode(options, firstpass):
@@ -1069,7 +1067,7 @@ def print_stats(options, start):
     if size >= 1024 * 1024:
         sizeinfo += ', {:.2f} MiB'.format(size/1024/1024)
     if options.l is not None:
-        limit = int(math.floor(options.l * 1024 * 1024))
+        limit = int(options.l * 1024 * 1024)
         if size > limit:
             sizeinfo += ', OVERWEIGHT: {} B'.format(size - limit)
         elif size < limit:
