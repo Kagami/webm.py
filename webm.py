@@ -875,10 +875,8 @@ def _calc_video_bitrate(options):
 def _encode(options, firstpass):
     passn = '1' if firstpass else '2'
     logfile = options.logfile[:-6]
-    vb = '{}k'.format(options.vb) if options.vb else '0'
-    ab = '{}k'.format(options.ab) if options.ab else '0'
-    threads = _TEXT_TYPE(options.threads)
     speed = '4' if firstpass else '1'
+    vb = '{}k'.format(options.vb) if options.vb else '0'
     outfile = os.devnull if firstpass else options.outfile
 
     # Input.
@@ -938,7 +936,7 @@ def _encode(options, firstpass):
         ]
     # XXX: Does VP8 have constant quality (vb=0)?
     args += [
-        '-b:v', vb, '-threads', threads,
+        '-b:v', vb, '-threads', _TEXT_TYPE(options.threads),
         # These are the defaults in libvpx 1.4.0 but won't harm:
         # it may help if they decide to change them.
         '-auto-alt-ref', '1', '-lag-in-frames', '25',
@@ -996,7 +994,7 @@ def _encode(options, firstpass):
     else:
         args += ['-ac', '2']
         if options.opus:
-            args += ['-c:a', 'libopus', '-b:a', ab]
+            args += ['-c:a', 'libopus', '-b:a', '{}k'.format(options.ab)]
         else:
             args += ['-c:a', 'libvorbis', '-q:a', _TEXT_TYPE(options.aq)]
         if options.af is not None:
