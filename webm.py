@@ -588,7 +588,7 @@ def _split_lua_params(s, delim=':'):
 
 
 def _pos_int_check(s):
-    return re.match(r'\d+$', s) is not None
+    return re.match(r'-?\d+$', s) is not None
 
 
 def _diff_dicts(defaults, d2):
