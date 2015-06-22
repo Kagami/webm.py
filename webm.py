@@ -524,6 +524,8 @@ def process_options(verinfo):
 def _parse_time(time):
     if isinstance(time, _NUM_TYPES):
         return time
+    if time == 'N/A':
+        return sys.maxsize
     # [hh]:[mm]:[ss[.xxx]]
     m = re.match(r'(?:(\d+):)?(?:(\d+)+:)?(\d+(?:\.\d+)?)$', time)
     if not m:
