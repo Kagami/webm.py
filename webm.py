@@ -925,8 +925,9 @@ def _encode(options, firstpass):
     # Video.
     if options.vp8:
         # VP8 is fast enough to use -speed=0 for both passes.
+        # VP8 has kf_max_dist=128 by default.
         # TODO: Slices?
-        args += ['-c:v', 'libvpx', '-speed', '0']
+        args += ['-c:v', 'libvpx', '-speed', '0', '-g', '9999']
     else:
         # tile-columns=6 by default but won't harm. See also:
         # <http://permalink.gmane.org/gmane.comp.multimedia.webm.devel/2339>.
@@ -940,7 +941,7 @@ def _encode(options, firstpass):
     args += [
         '-b:v', vb, '-threads', _TEXT_TYPE(options.threads),
         # These are the defaults in libvpx 1.4.0 but won't harm:
-        # it may help if they decide to change them.
+        # it might help if they decide to change them.
         '-auto-alt-ref', '1', '-lag-in-frames', '25',
         # Using other subsamplings require profile>0 which support
         # across various decoders is still poor. User may still redefine
