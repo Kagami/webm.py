@@ -3,9 +3,6 @@
 """
 convert videos to WebM format using FFmpeg
 
-Intro
------
-
 features:
   - encodes input video to WebM container with VP9 and Opus
   - uses 2-pass encoding, has optional VP8/Vorbis and album art modes
@@ -40,9 +37,6 @@ use custom location of FFmpeg executable:
   - *nix:    WEBM_FFMPEG=/opt/ffmpeg/ffmpeg python {title} -i in.mkv
   - Windows: set WEBM_FFMPEG=C:\\ffmpeg.exe & python {title} -i in.mkv
 similarly you can set custom location of mpv executable with WEBM_MPV
-
-Options
--------
 """
 
 # Since there is no way to wrap future imports in try/except, we use
@@ -161,8 +155,8 @@ def check_dependencies():
     pythonv = '{}.{}.{}'.format(*sys.version_info)
     if ((sys.version_info[0] == 2 and sys.version_info[1] < 7) or
             (sys.version_info[0] == 3 and sys.version_info[1] < 2) or
-            # Just in case... Also don't restrict <= 3, script may
-            # probably work on Python 4+ too.
+            # Just in case... Also don't restrict <= 3, script might
+            # work on Python 4+ too.
             sys.version_info[0] < 2):
         raise Exception(
             'Python version must be 2.7+ or 3.2+, using: {}'.format(pythonv))
@@ -606,10 +600,6 @@ def _diff_dicts(defaults, d2):
 
 def run_interactive_mode(options):
     """
-    Note: if you keyboard doesn't have keypad keys and you still want
-    to use appropriate actions (they're not mandatory to define the cut
-    or crop area), pass "--help-imode" flag to program to see how.
-
     Press "c" first time to mark the start of the fragment.
     Press it again to mark the end of the fragment.
     Press "KP1" after "c" to define the fragment from
@@ -645,6 +635,10 @@ def run_interactive_mode(options):
         args += shlex.split(options.po)
     args += [options.infile]
     print('Running interactive mode.\n', file=sys.stderr)
+    print("Note: if you keyboard doesn't have keypad keys and you still want\n"
+          "to use appropriate actions (they're not mandatory to define the\n"
+          'cut or crop area), pass "--help-imode" flag to program to see how.'
+          '\n', file=sys.stderr)
     print(_doc2help(run_interactive_mode.__doc__), file=sys.stderr)
 
     # We let the user to see stderr output and catch stdout by ourself.
@@ -944,7 +938,7 @@ def _encode(options, firstpass):
         # it might help if they decide to change them.
         '-auto-alt-ref', '1', '-lag-in-frames', '25',
         # Using other subsamplings require profile>0 which support
-        # across various decoders is still poor. User may still redefine
+        # across various decoders is still poor. User can still redefine
         # this via ``-fo``.
         '-pix_fmt', '+yuv420p',
     ]
@@ -1048,7 +1042,7 @@ def encode(options):
     # it should always be unicode.
     logfh, options.logfile = tempfile.mkstemp(suffix='-0.log')
     os.close(logfh)
-    # NOTE: 2-pass encoding in cover mode may be faster than 1-pass.
+    # NOTE: 2-pass encoding in cover mode might be faster than 1-pass.
     # Though we may add option to use only single pass in future.
     _encode(options, firstpass=True)
     _encode(options, firstpass=False)
@@ -1254,7 +1248,7 @@ function crop_init()
     local dwidth = mp.get_property_number("dwidth")
     local dheight = mp.get_property_number("dheight")
     -- Get scale factor.
-    -- NOTE: This probably may work incorrectly if user resized mpv
+    -- NOTE: This might work incorrectly if user resized mpv
     -- window or for some other obscure use cases. Please report it.
     local res_x, res_y = mp.get_osd_resolution()
     sw = dwidth / res_x

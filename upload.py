@@ -2,7 +2,7 @@
 
 """
 Auto-generate README in reST format and upload package to PyPI.
-All credit goes to <https://coderwall.com/p/qawuyq>.
+All credits go to <https://coderwall.com/p/qawuyq>.
 """
 
 import os
