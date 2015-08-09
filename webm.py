@@ -856,7 +856,7 @@ def _calc_video_bitrate(options):
     """
     Calculate video bitrate in kilobits.
     """
-    limit_kbits = options.l * 8 * 1024 * 1024 / 1000
+    limit_kbits = options.l * 8 * 1024
     vb = limit_kbits / options.outduration - options.ab
     vb = int(vb * 10) / 10
     if vb < 0.1:
