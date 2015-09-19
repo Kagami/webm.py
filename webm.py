@@ -808,7 +808,7 @@ def _get_input_info(options):
             raise Exception(
                 'End position is less or equal than the input seek')
     else:
-        outduration = induration
+        outduration = induration - shift
 
     # Metadata.
     intitle = ''
