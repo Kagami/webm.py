@@ -310,9 +310,6 @@ def process_options(verinfo):
         '-vh', metavar='height', type=int,
         help='output video height, e.g. 720')
     parser.add_argument(
-        '-sws', metavar='algo', default='lanczos',
-        help='scaling algorithm (default: %(default)s)')
-    parser.add_argument(
         '-vb', metavar='bitrate', type=float,
         help='target video bitrate in kbits')
     parser.add_argument(
@@ -958,8 +955,6 @@ def _encode(options, firstpass):
         scale += '-1' if options.vw is None else _TEXT_TYPE(options.vw)
         scale += ':'
         scale += '-1' if options.vh is None else _TEXT_TYPE(options.vh)
-        scale += ':flags='
-        scale += options.sws
         vfilters += [scale]
     if options.sa is not None:
         sub_delay = 0
