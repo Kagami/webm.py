@@ -650,7 +650,7 @@ def run_interactive_mode(options):
                 r'cut=(-1|\d+(?:\.\d+)?):(-1|\d+(?:\.\d+)?)$',
                 line)
             if cutm:
-                cut = cutm.groups()
+                cut = [round(float(v), 3) for v in cutm.groups()]
                 if crop and info:
                     break
                 continue
@@ -689,9 +689,10 @@ def run_interactive_mode(options):
     print('='*50, file=sys.stderr)
     if cut:
         # ``-1`` is a special value and defines start/end of the file.
-        shift = '0' if cut[0] == '-1' else _timestamp(float(cut[0]))
-        endpos = 'EOF' if cut[1] == '-1' else _timestamp(float(cut[1]))
-        print('[CUT] {} - {}'.format(shift, endpos), file=sys.stderr)
+        shift = '0' if cut[0] < 0 else _timestamp(cut[0])
+        endpos = 'EOF' if cut[1] < 0 else _timestamp(cut[1])
+        print('[CUT] {} - {} ({} - {})'.format(shift, endpos, cut[0], cut[1]),
+              file=sys.stderr)
     if crop:
         print('[CROP] x1={}, y1={}, width={}, height={}'.format(
                 crop[3], crop[4], crop[1], crop[2]),
@@ -707,9 +708,9 @@ def run_interactive_mode(options):
             sys.exit(1)
         if ok == '' or ok.lower() == 'y':
             if cut:
-                if cut[0] != '-1':
+                if cut[0] >= 0:
                     options.ss = cut[0]
-                if cut[1] != '-1':
+                if cut[1] >= 0:
                     options.to = cut[1]
             if crop:
                 options.vfi = crop[0] if options.vfi is None \
@@ -875,7 +876,7 @@ def _encode(options, firstpass):
     # Input.
     args = ['-hide_banner']
     if options.ss is not None:
-        args += ['-ss', options.ss]
+        args += ['-ss', _TEXT_TYPE(options.ss)]
     if options.cover is not None:
         if options.cover is True:
             args += ['-r', '1', '-loop', '1']
@@ -891,7 +892,7 @@ def _encode(options, firstpass):
     if (options.t is not None or
             options.to is not None or
             options.cover is not None):
-        args += ['-t', _TEXT_TYPE(options.outduration)]
+        args += ['-t', _TEXT_TYPE(round(options.outduration, 3))]
 
     # Streams.
     if (options.vs is not None or
@@ -963,7 +964,7 @@ def _encode(options, firstpass):
         if options.sd is not None:
             sub_delay += options.sd
         if sub_delay:
-            vfilters += ['setpts=PTS+{}/TB'.format(sub_delay)]
+            vfilters += ['setpts=PTS+{}/TB'.format(round(sub_delay, 3))]
         subtitles = 'subtitles='
         sub_file = options.infile if options.sa is True else options.sa
         # Escape FFmpeg filter argument (see ffmpeg-filters(1), "Notes
