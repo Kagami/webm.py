@@ -929,11 +929,8 @@ def _encode(options, firstpass):
             '-c:v', 'libvpx-vp9', '-speed', speed,
             '-tile-columns', '6', '-frame-parallel', '0',
         ]
-    # XXX: Does VP8 have constant quality (vb=0)?
     args += [
         '-b:v', vb, '-threads', _TEXT_TYPE(options.threads),
-        # These are the defaults in libvpx 1.4.0 but won't harm:
-        # it might help if they decide to change them.
         '-auto-alt-ref', '1', '-lag-in-frames', '25',
         # Using other subsamplings require profile>0 which support
         # across various decoders is still poor. User can still redefine
