@@ -379,6 +379,9 @@ def process_options(verinfo):
              '--sub-delay=1 in mpv actually shift subtitles backward;\n'
              'you should pass -1 to this option to shift backward')
     parser.add_argument(
+        '-sf', metavar='subforcestyle',
+        help='override default style of the subtitles')
+    parser.add_argument(
         '-p', action='store_true',
         help='run player (mpv) in interactive mode to cut and crop video\n'
              'you cannot use -p with -ss, -t, -to')
@@ -866,6 +869,20 @@ def _calc_video_bitrate(options):
     return vb
 
 
+def _escape_ffarg(arg):
+    """
+    Escape FFmpeg filter argument (see ffmpeg-filters(1), "Notes on
+    filtergraph escaping"). Escaping rules are rather mad.
+
+    Known issues: names like :.ass, 1:.ass still don't work. Seems like
+    a bug in FFmpeg because _:.ass works ok.
+    """
+    arg = arg.replace('\\', r'\\')      # \ -> \\
+    arg = arg.replace("'",  r"'\\\''")  # ' -> '\\\''
+    arg = arg.replace(':',  r'\:')      # : -> \:
+    return "'{}'".format(arg)
+
+
 def _encode(options, firstpass):
     passn = '1' if firstpass else '2'
     logfile = options.logfile[:-6]
@@ -964,16 +981,11 @@ def _encode(options, firstpass):
             vfilters += ['setpts=PTS+{}/TB'.format(round(sub_delay, 3))]
         subtitles = 'subtitles='
         sub_file = options.infile if options.sa is True else options.sa
-        # Escape FFmpeg filter argument (see ffmpeg-filters(1), "Notes
-        # on filtergraph escaping"). Escaping rules are rather mad.
-        # NOTE: Known bugs: names like :.ass, 1:.ass still don't work.
-        # Seems like a bug in FFmpeg because _:.ass works ok.
-        sub_file = sub_file.replace('\\', r'\\')      # \ -> \\
-        sub_file = sub_file.replace("'",  r"'\\\''")  # ' -> '\\\''
-        sub_file = sub_file.replace(':',  r'\:')      # : -> \:
-        subtitles += "'{}'".format(sub_file)
+        subtitles += _escape_ffarg(sub_file)
         if options.si is not None:
             subtitles += ':si={}'.format(options.si)
+        if options.sf is not None:
+            subtitles += ':force_style={}'.format(_escape_ffarg(options.sf))
         vfilters += [subtitles]
         if sub_delay:
             vfilters += ['setpts=PTS-STARTPTS']
