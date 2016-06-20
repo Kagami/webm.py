@@ -24,10 +24,8 @@ Just save <https://raw.githubusercontent.com/Kagami/webm.py/master/webm.py>
 
 Optionally put it somewhere in your `PATH`:
 ```bash
-mkdir -p ~/.local/bin
-wget https://raw.githubusercontent.com/Kagami/webm.py/master/webm.py -O ~/.local/bin/webm
-chmod +x ~/.local/bin/webm
-export PATH=$PATH:~/.local/bin
+[sudo] wget https://github.com/Kagami/webm.py/raw/master/webm.py -O /usr/local/bin/webm
+[sudo] chmod +x /usr/local/bin/webm
 ```
 
 Or with pip:
