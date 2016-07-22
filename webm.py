@@ -934,9 +934,8 @@ def _encode(options, firstpass):
     # Video.
     if options.vp8:
         # VP8 is fast enough to use -speed=0 for both passes.
-        # VP8 has kf_max_dist=128 by default.
         # TODO: Slices?
-        args += ['-c:v', 'libvpx', '-speed', '0', '-g', '9999']
+        args += ['-c:v', 'libvpx', '-speed', '0']
     else:
         # tile-columns=6 by default but won't harm. See also:
         # <http://permalink.gmane.org/gmane.comp.multimedia.webm.devel/2339>.
@@ -948,7 +947,15 @@ def _encode(options, firstpass):
         ]
     args += [
         '-b:v', vb, '-threads', _TEXT_TYPE(options.threads),
+        # Enabled for VP9 by default but always force it just in case.
+        # TODO: enable_auto_alt_ref might be set to 2 actually:
+        # < jimbankoski> auto-alt-ref=2 allows vpx to use multiple alt refs
+        # < jimbankoski> and I think actually turns it on by default
+        # But ffmpeg's option is boolean and doesn't allow this.
         '-auto-alt-ref', '1', '-lag-in-frames', '25',
+        # Default to 128 for both VP8 and VP9 but bigger keyframe interval
+        # saves bitrate a bit.
+        '-g', '9999',
         # Using other subsamplings require profile>0 which support
         # across various decoders is still poor. User can still redefine
         # this via ``-fo``.
