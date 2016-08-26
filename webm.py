@@ -125,7 +125,11 @@ def _ffmpeg_output(args, check_code=True, debug=False):
         raise Exception('FFmpeg exited with error')
     if _PY2:
         out = out.decode(OS_ENCODING)
-        err = err.decode(OS_ENCODING)
+        # XXX: Error might occur if video file has corrupted/wrong
+        # encoding of metadata. Note that you need to use py2 in order
+        # to get effect of this, ``Popen(universal_newlines=True)`` on
+        # py3 always returns unicode.
+        err = err.decode(OS_ENCODING, 'ignore')
     return {'stdout': out, 'stderr': err, 'code': p.returncode}
 
 
