@@ -15,7 +15,7 @@ features:
 dependencies:
   - Python 2.7+ or 3.2+ (using: {pythonv})
   - FFmpeg 2+ compiled with libvpx and libopus (using: {ffmpegv})
-  - mpv 0.8+ compiled with Lua support, optional (using: {mpvv})
+  - mpv 0.17+ compiled with Lua support, optional (using: {mpvv})
 
 encoding modes:
   - by default bitrate calculated to fit the output video to limit
@@ -211,8 +211,8 @@ def check_dependencies():
             # after 'z' don't matter.
             if need_mpv and re.match(r'\d+\.\d+\.\d+', mpvv):
                 major, minor, _ = mpvv.split('.', 2)
-                if int(major) == 0 and int(minor) < 8:
-                    raise Exception('mpv version must be 0.8+, '
+                if int(major) == 0 and int(minor) < 17:
+                    raise Exception('mpv version must be 0.17+, '
                                     'using: {}'.format(mpvv))
             else:
                 # Most probably version from git. Do nothing.
@@ -1150,9 +1150,6 @@ local cut_pos = nil
 local crop_active = false
 local crop_resizing = false
 local crop_moving = false
-local sw, sh = 0, 0
--- NOTE: That's not a real values, but a scaled ones. You need to
--- multiple them to sw/sh before returning back to user.
 local width, height = 0, 0
 -- x2 can be less than x1, y2 can be less than y1.
 local crop_x1, crop_y1, crop_x2, crop_y2 = 0, 0, 0, 0
@@ -1260,17 +1257,7 @@ end
 
 function crop_init()
     crop_active = true
-    local dwidth = mp.get_property_number("dwidth")
-    local dheight = mp.get_property_number("dheight")
-    -- Get scale factor.
-    -- NOTE: This might work incorrectly if user resized mpv
-    -- window or for some other obscure use cases. Please report it.
-    local res_x, res_y = mp.get_osd_resolution()
-    sw = dwidth / res_x
-    sh = dheight / res_y
-    -- Scale resolution.
-    width = dwidth / sw
-    height = dheight / sh
+    width, height = mp.get_osd_size()
 end
 
 function crop_init_at_center()
@@ -1370,23 +1357,15 @@ function crop_drag()
     end
 end
 
-function round(x)
-    return math.floor(x + 0.5)
-end
-
 function crop()
     if not crop_active then
         log2user("Crop region is empty")
         return
     end
-    -- Fix floating point inaccuracy with round (because in mpv's
-    -- gorgeous API mouse coords are floating, sw/sh are floating, etc).
-    -- E.g. sw=2.499999 * cropw=512 should give 1280 as well as
-    --      sw=2.5      * cropw=512.0001
-    local crop_x = round(sw * math.min(crop_x1, crop_x2))
-    local crop_y = round(sh * math.min(crop_y1, crop_y2))
-    local crop_w = round(sw * math.abs(crop_x2 - crop_x1))
-    local crop_h = round(sh * math.abs(crop_y2 - crop_y1))
+    local crop_x = math.min(crop_x1, crop_x2)
+    local crop_y = math.min(crop_y1, crop_y2)
+    local crop_w = math.abs(crop_x2 - crop_x1)
+    local crop_h = math.abs(crop_y2 - crop_y1)
     if crop_w == 0 or crop_h == 0 then
         log2user("Crop region is empty")
     else
