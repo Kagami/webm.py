@@ -633,8 +633,7 @@ def run_interactive_mode(options):
     finally:
         os.close(luafh)
 
-    # Disabling OSC since it conflicts with interactive mode.
-    args = ['--no-osc', '--msg-level', 'all=error', '--script', luafile]
+    args = ['--msg-level', 'all=error', '--script', luafile]
     if options.po is not None:
         args += shlex.split(options.po)
     args += [options.infile]
