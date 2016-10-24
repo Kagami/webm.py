@@ -16,7 +16,7 @@ Yet another bikeshed to encode WebM videos from CLI.
 
 * [Python](https://www.python.org/downloads/) 2.7+ or 3.2+
 * [FFmpeg](https://ffmpeg.org/download.html) 2+ compiled with libvpx and libopus
-* [mpv](http://mpv.io/installation/) 0.8+ compiled with Lua support, *for interactive mode only*
+* [mpv](http://mpv.io/installation/) 0.17+ compiled with Lua support, *for interactive mode only*
 
 ## Installation
 
