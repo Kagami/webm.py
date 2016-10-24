@@ -962,7 +962,7 @@ def _encode(options, firstpass):
         # Using other subsamplings require profile>0 which support
         # across various decoders is still poor. User can still redefine
         # this via ``-fo``.
-        '-pix_fmt', '+yuv420p',
+        '-pix_fmt', 'yuv420p',
     ]
     if options.crf is not None:
         args += ['-crf', _TEXT_TYPE(options.crf)]
