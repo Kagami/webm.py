@@ -348,11 +348,11 @@ def process_options(verinfo):
         help='use Vorbis codec for audio\n')
     parser.add_argument(
         '-ab', metavar='bitrate', type=float,
-        help='Opus audio bitrate in kbits (default: 64)\n'
+        help='Opus audio bitrate in kbits (default: 128)\n'
              'you cannot use -ab with -vorbis')
     parser.add_argument(
         '-aq', metavar='quality', type=int,
-        help='Vorbis audio quality, -1..10 (default: 0)\n'
+        help='Vorbis audio quality, -1..10 (default: 4)\n'
              'you cannot use -aq with -opus')
     parser.add_argument(
         '-aa', metavar='audiofile',
@@ -476,14 +476,14 @@ def process_options(verinfo):
             if options.aq is not None:
                 parser.error('you cannot use -aq with -opus')
             if options.ab is None:
-                options.ab = 64
+                options.ab = 128
             elif options.ab < 1:
                 parser.error('invalid audio bitrate')
         else:
             if options.ab is not None:
                 parser.error('you cannot use -ab with -vorbis')
             if options.aq is None:
-                options.aq = 0
+                options.aq = 4
             elif not -1 <= options.aq <= 10:
                 parser.error('vorbis quality level must be in -1..10 range')
             # We need this to calculate the target video bitrate.
@@ -937,7 +937,6 @@ def _encode(options, firstpass):
     # Video.
     if options.vp8:
         # VP8 is fast enough to use -speed=0 for both passes.
-        # TODO: Slices?
         args += ['-c:v', 'libvpx', '-speed', '0']
     else:
         # tile-columns=6 by default but won't harm. See also:
@@ -950,15 +949,7 @@ def _encode(options, firstpass):
         ]
     args += [
         '-b:v', vb, '-threads', _TEXT_TYPE(options.threads),
-        # Enabled for VP9 by default but always force it just in case.
-        # TODO: enable_auto_alt_ref might be set to 2 actually:
-        # < jimbankoski> auto-alt-ref=2 allows vpx to use multiple alt refs
-        # < jimbankoski> and I think actually turns it on by default
-        # But ffmpeg's option is boolean and doesn't allow this.
-        '-auto-alt-ref', '1', '-lag-in-frames', '25',
-        # Default to 128 for both VP8 and VP9 but bigger keyframe interval
-        # saves bitrate a bit.
-        '-g', '9999',
+        '-auto-alt-ref', '1', '-lag-in-frames', '25', '-g', '128',
         # Using other subsamplings require profile>0 which support
         # across various decoders is still poor. User can still redefine
         # this via ``-fo``.
