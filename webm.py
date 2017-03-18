@@ -891,6 +891,7 @@ def _encode(options, firstpass):
     logfile = options.logfile[:-6]
     speed = '4' if firstpass else '1'
     vb = '{}k'.format(options.vb) if options.vb else '0'
+    gop = '128' if options.cover is None else '9999'
     outfile = os.devnull if firstpass else options.outfile
 
     # Input.
@@ -949,7 +950,7 @@ def _encode(options, firstpass):
         ]
     args += [
         '-b:v', vb, '-threads', _TEXT_TYPE(options.threads),
-        '-auto-alt-ref', '1', '-lag-in-frames', '25', '-g', '128',
+        '-auto-alt-ref', '1', '-lag-in-frames', '25', '-g', gop,
         # Using other subsamplings require profile>0 which support
         # across various decoders is still poor. User can still redefine
         # this via ``-fo``.
