@@ -863,7 +863,7 @@ def _calc_video_bitrate(options):
     limit_kbits = options.l * 8 * 1024
     vb = limit_kbits / options.outduration - options.ab
     vb = int(vb * 10) / 10
-    if vb < 0.1:
+    if vb < 0.001:
         raise Exception(
             '\n\nUnable to calculate video bitrate for the given limit.\n'
             'Either limit is too low, duration of the video is too long\n'
