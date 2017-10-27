@@ -95,7 +95,7 @@ Raising the minimal required version of dependency is not considered as breaking
 
 webm.py - encode WebM videos
 
-Written in 2015-2016 by Kagami Hiiragi <kagami@genshiken.org>
+Written in 2015-2017 by Kagami Hiiragi <kagami@genshiken.org>
 
 To the extent possible under law, the author(s) have dedicated all copyright and related and neighboring rights to this software to the public domain worldwide. This software is distributed without any warranty.
 
