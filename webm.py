@@ -116,20 +116,22 @@ def _ffmpeg_output(args, check_code=True, debug=False):
     try:
         p = subprocess.Popen(
                 args, stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                universal_newlines=True)
+                stderr=subprocess.PIPE)
     except Exception as exc:
         raise Exception('failed to run FFmpeg ({})'.format(exc))
+    # These are bytes in both Py2 and 3.
     out, err = p.communicate()
     if check_code and p.returncode != 0:
         raise Exception('FFmpeg exited with error')
-    if _PY2:
-        out = out.decode(OS_ENCODING)
-        # XXX: Error might occur if video file has corrupted/wrong
-        # encoding of metadata. Note that you need to use py2 in order
-        # to get effect of this, ``Popen(universal_newlines=True)`` on
-        # py3 always returns unicode.
-        err = err.decode(OS_ENCODING, 'ignore')
+
+    # NOTE(Kagami): Always use UTF-8 because it's what FFmpeg uses, at
+    # least on Windows. Let's ignore non-UTF8 nix systems for now.
+    out = out.decode('utf-8', 'ignore')
+    err = err.decode('utf-8', 'ignore')
+    # Fix for Windows newlines.
+    out = out.replace('\r\n', '\n')
+    err = err.replace('\r\n', '\n')
+
     return {'stdout': out, 'stderr': err, 'code': p.returncode}
 
 
