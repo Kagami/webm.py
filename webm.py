@@ -927,7 +927,7 @@ def _encode(options, firstpass):
         args += ['-map', vstream]
         ainput = 0 if options.aa is None else 1
         astream = getattr(options, 'as')
-        astream = 'a:0' if astream is None else _TEXT_TYPE(astream)
+        astream = 'a:0?' if astream is None else _TEXT_TYPE(astream)
         if not astream.startswith('['):
             astream = '{}:{}'.format(ainput, astream)
         args += ['-map', astream]
