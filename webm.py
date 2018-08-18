@@ -261,8 +261,9 @@ def _get_main_infile(options):
 def process_options(verinfo):
     import argparse
     doc = __doc__.format(stitle=__stitle__, title=__title__, **verinfo)
-    verstr = '%(prog)s\t{}\nffmpeg\t{ffmpegv}\nmpv\t{mpvv}'.format(
-        __version__, **verinfo)
+    verstr = (
+        '%(prog)s\t{}\npython\t{pythonv}\n'
+        'ffmpeg\t{ffmpegv}\nmpv\t{mpvv}'.format(__version__, **verinfo))
 
     parser = argparse.ArgumentParser(
         prog=__title__,
@@ -1107,7 +1108,7 @@ def main():
     options = None
     try:
         if '-cn' not in ARGS:
-            verinfo = check_dependencies()
+            verinfo.update(check_dependencies())
         if '-hi' in ARGS or '--help-imode' in ARGS:
             print_interactive_help()
             sys.exit()
