@@ -24,18 +24,17 @@ encoding modes:
   - -crf and -vb 0 enable constant quality mode
 
 examples:
-  (use `{stitle}' instead of `python {title}' if you installed it with pip)
-  - fit video to default limit: python {title} -i in.mkv
-  - fit video to 6 MiB:         python {title} -i in.mkv -l 6
-  - set video bitrate to 600k:  python {title} -i in.mkv -vb 600
-  - constrained quality:        python {title} -i in.mkv -crf 20
-  - constant quality:           python {title} -i in.mkv -crf 20 -vb 0
-  - encode with VP8 & Vorbis:   python {title} -i in.mkv -vp8
-  - make album art video:       python {title} -cover -i pic.png -aa song.flac
+  - fit video to default limit: {stitle} -i in.mkv
+  - fit video to 6 MiB:         {stitle} -i in.mkv -l 6
+  - set video bitrate to 600k:  {stitle} -i in.mkv -vb 600
+  - constrained quality:        {stitle} -i in.mkv -crf 20
+  - constant quality:           {stitle} -i in.mkv -crf 20 -vb 0
+  - encode with VP8 & Vorbis:   {stitle} -i in.mkv -vp8
+  - make album art video:       {stitle} -cover -i pic.png -aa song.flac
 
 use custom location of FFmpeg executable:
-  - *nix:    WEBM_FFMPEG=/opt/ffmpeg/ffmpeg python {title} -i in.mkv
-  - Windows: set WEBM_FFMPEG=C:\\ffmpeg.exe & python {title} -i in.mkv
+  - *nix:    WEBM_FFMPEG=/opt/ffmpeg/ffmpeg {stitle} -i in.mkv
+  - Windows: set WEBM_FFMPEG=C:\\ffmpeg.exe & {stitle} -i in.mkv
 similarly you can set custom location of mpv executable with WEBM_MPV
 """
 
@@ -311,11 +310,13 @@ def process_options(caps):
     import argparse
     doc = __doc__.format(stitle=__stitle__, title=__title__, **caps)
     verstr = (
-        '%(prog)s\t{}\npython\t{pythonv}\n'
-        'ffmpeg\t{ffmpegv}\nmpv\t{mpvv}'.format(__version__, **caps))
+        '{}\t{}\n'
+        'python\t{pythonv}\n'
+        'ffmpeg\t{ffmpegv}\n'
+        'mpv\t{mpvv}'.format(__title__, __version__, **caps))
 
     parser = argparse.ArgumentParser(
-        prog=__title__,
+        prog=__stitle__,
         description=doc,
         formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument(
