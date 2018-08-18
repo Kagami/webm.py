@@ -54,7 +54,6 @@ import shlex
 import locale
 import tempfile
 import traceback
-import subprocess
 
 
 __title__ = 'webm.py'
@@ -63,10 +62,22 @@ __version__ = '0.11.0'
 __license__ = 'CC0'
 
 
+_WIN = os.name == 'nt'
 _PY2 = sys.version_info[0] == 2
 _TEXT_TYPE = unicode if _PY2 else str
 _NUM_TYPES = (int, long, float) if _PY2 else (int, float)
 _input = raw_input if _PY2 else input
+_range = xrange if _PY2 else range
+
+
+if _WIN and _PY2:
+    try:
+        # Fix unicode subprocess arguments on Win+Py2:
+        # https://bugs.python.org/issue1759845
+        import subprocessww
+    except ImportError:
+        pass
+import subprocess
 
 
 # We can't use e.g. ``sys.stdout.encoding`` because user can redirect
@@ -79,11 +90,38 @@ _input = raw_input if _PY2 else input
 OS_ENCODING = locale.getpreferredencoding() or 'utf-8'
 
 
-ARGS = sys.argv[1:]
-# In Python2 ``sys.argv`` is a list of bytes. See:
-# <http://stackoverflow.com/q/4012571>,
-# <https://bugs.python.org/issue2128> for details.
-if _PY2: ARGS = [arg.decode(OS_ENCODING) for arg in ARGS]
+if _WIN and _PY2:
+    # https://stackoverflow.com/a/846931
+    # Broken due to https://bugs.python.org/issue2128
+    def win32_unicode_argv():
+        from ctypes import POINTER, byref, cdll, c_int, windll
+        from ctypes.wintypes import LPCWSTR, LPWSTR
+
+        GetCommandLineW = cdll.kernel32.GetCommandLineW
+        GetCommandLineW.argtypes = []
+        GetCommandLineW.restype = LPCWSTR
+
+        CommandLineToArgvW = windll.shell32.CommandLineToArgvW
+        CommandLineToArgvW.argtypes = [LPCWSTR, POINTER(c_int)]
+        CommandLineToArgvW.restype = POINTER(LPWSTR)
+
+        cmd = GetCommandLineW()
+        argc = c_int(0)
+        argv = CommandLineToArgvW(cmd, byref(argc))
+        if argc.value > 0:
+            # Remove Python executable and commands if present
+            start = argc.value - len(sys.argv)
+            return [argv[i] for i in _range(start, argc.value)]
+        else:
+            return []
+
+    ARGS = win32_unicode_argv()[1:]
+else:
+    ARGS = sys.argv[1:]
+    # In Python2 ``sys.argv`` is a list of bytes. See:
+    # <http://stackoverflow.com/q/4012571>,
+    # <https://bugs.python.org/issue2128> for details.
+    if _PY2: ARGS = [arg.decode(OS_ENCODING) for arg in ARGS]
 
 
 # Python3 returns unicode here fortunately.
@@ -124,7 +162,7 @@ def _ffmpeg_output(args, check_code=True, debug=False):
     if check_code and p.returncode != 0:
         raise Exception('FFmpeg exited with error')
 
-    # NOTE(Kagami): Always use UTF-8 because it's what FFmpeg uses, at
+    # XXX(Kagami): Always use UTF-8 because it's what FFmpeg uses, at
     # least on Windows. Let's ignore non-UTF8 nix systems for now.
     out = out.decode('utf-8', 'ignore')
     err = err.decode('utf-8', 'ignore')

@@ -35,7 +35,10 @@ Or with pip:
 
 ## Usage
 
-**NOTE:** Windows users may want to add Python executable to the `PATH`. See <https://docs.python.org/3/using/windows.html#excursus-setting-environment-variables> for details. Otherwise just type the full path to your `python.exe` location instead of `python`.
+**NOTE:** Windows users may want to add Python executable to the `PATH`. See
+[Setting environment variables](https://docs.python.org/3/using/windows.html#excursus-setting-environment-variables>)
+for details. Otherwise just type the full path to your `python.exe` location
+instead of `python`.
 
 Use `webm` instead of `python webm.py` if you installed it with pip.
 
@@ -77,6 +80,16 @@ Pass `-p` flag to interactively select cut frargment/crop area with mpv. Demo:
 Show help on interactive mode:
 ```bash
 python webm.py -hi
+```
+
+## Windows, Python 2 and non-ASCII filenames
+
+Unicode filenames won't work on Windows with Python 2 due to Python bugs. Use
+Python 3 if you can but if not an option set `PYTHONIOENCODING` environment
+variable to `utf-8` and run:
+
+```bash
+pip install subprocessww
 ```
 
 ## Related links
