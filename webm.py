@@ -241,7 +241,9 @@ def _is_same_paths(path1, path2):
         return True
     # Resolve symlinks and hardlinks.
     try:
-        return os.stat(path1).st_ino == os.stat(path2).st_ino
+        inode1 = os.stat(path1).st_ino
+        inode2 = os.stat(path2).st_ino
+        return inode1 and inode2 and inode1 == inode2
     except Exception:
         return False
 
