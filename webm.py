@@ -157,7 +157,7 @@ def _mpv_output(args, check_code=True, catch_stdout=True, debug=False):
     return {'stdout': out, 'stderr': err, 'code': p.returncode}
 
 
-def check_dependencies():
+def get_capabilities():
     pythonv = '{}.{}.{}'.format(*sys.version_info)
     if ((sys.version_info[0] == 2 and sys.version_info[1] < 7) or
             (sys.version_info[0] == 3 and sys.version_info[1] < 2) or
@@ -195,6 +195,10 @@ def check_dependencies():
         if not re.search(r'\bencoders:.*\blibvorbis\b', codecout):
             raise Exception('FFmpeg is not compiled with libvorbis support')
 
+    vp9out = _ffmpeg_output(
+        ['-hide_banner', '-h', 'encoder=libvpx-vp9'])['stdout']
+    row_mt = '-row-mt' in vp9out
+
     mpvv = 'no'
     need_mpv = '-p' in ARGS
     try:
@@ -220,7 +224,12 @@ def check_dependencies():
                 # Most probably version from git. Do nothing.
                 pass
 
-    return {'pythonv': pythonv, 'ffmpegv': ffmpegv, 'mpvv': mpvv}
+    return {
+        'pythonv': pythonv,
+        'ffmpegv': ffmpegv,
+        'row_mt': row_mt,
+        'mpvv': mpvv,
+    }
 
 
 def _is_same_paths(path1, path2):
@@ -258,12 +267,12 @@ def _get_main_infile(options):
     return options.infile if options.cover is None else options.aa
 
 
-def process_options(verinfo):
+def process_options(caps):
     import argparse
-    doc = __doc__.format(stitle=__stitle__, title=__title__, **verinfo)
+    doc = __doc__.format(stitle=__stitle__, title=__title__, **caps)
     verstr = (
         '%(prog)s\t{}\npython\t{pythonv}\n'
-        'ffmpeg\t{ffmpegv}\nmpv\t{mpvv}'.format(__version__, **verinfo))
+        'ffmpeg\t{ffmpegv}\nmpv\t{mpvv}'.format(__version__, **caps))
 
     parser = argparse.ArgumentParser(
         prog=__title__,
@@ -889,7 +898,7 @@ def _escape_ffarg(arg):
     return "'{}'".format(arg)
 
 
-def _encode(options, firstpass):
+def _encode(options, caps, firstpass):
     passn = '1' if firstpass else '2'
     logfile = options.logfile[:-6]
     speed = '4' if firstpass else '1'
@@ -951,6 +960,8 @@ def _encode(options, firstpass):
             '-c:v', 'libvpx-vp9', '-speed', speed,
             '-tile-columns', '6', '-frame-parallel', '0',
         ]
+        if caps['row_mt']:
+            args += ['-row-mt', '1']
     args += [
         '-b:v', vb, '-threads', _TEXT_TYPE(options.threads),
         '-auto-alt-ref', '1', '-lag-in-frames', '25', '-g', gop,
@@ -1038,7 +1049,7 @@ def _encode(options, firstpass):
     _ffmpeg(args, debug=True)
 
 
-def encode(options):
+def encode(options, caps):
     import multiprocessing
     options.__dict__.update(_get_input_info(options))
     if options.outfile is None:
@@ -1054,8 +1065,8 @@ def encode(options):
     os.close(logfh)
     # NOTE: 2-pass encoding in cover mode might be faster than 1-pass.
     # Though we may add option to use only single pass in future.
-    _encode(options, firstpass=True)
-    _encode(options, firstpass=False)
+    _encode(options, caps, firstpass=True)
+    _encode(options, caps, firstpass=False)
 
 
 def print_stats(options, start):
@@ -1104,19 +1115,19 @@ def cleanup(options):
 
 
 def main():
-    verinfo = {'pythonv': '?', 'ffmpegv': '?', 'mpvv': '?'}
+    caps = {'pythonv': '?', 'ffmpegv': '?', 'mpvv': '?', 'row_mt': False}
     options = None
     try:
         if '-cn' not in ARGS:
-            verinfo.update(check_dependencies())
+            caps.update(get_capabilities())
         if '-hi' in ARGS or '--help-imode' in ARGS:
             print_interactive_help()
             sys.exit()
-        options = process_options(verinfo)
+        options = process_options(caps)
         if options.p:
             run_interactive_mode(options)
         start = time.time()
-        encode(options)
+        encode(options, caps)
         print_stats(options, start)
     except Exception as exc:
         if _is_verbose(options):
