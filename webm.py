@@ -261,6 +261,8 @@ def _get_main_infile(options):
 def process_options(verinfo):
     import argparse
     doc = __doc__.format(stitle=__stitle__, title=__title__, **verinfo)
+    verstr = '%(prog)s\t{}\nffmpeg\t{ffmpegv}\nmpv\t{mpvv}'.format(
+        __version__, **verinfo)
 
     parser = argparse.ArgumentParser(
         prog=__title__,
@@ -270,9 +272,7 @@ def process_options(verinfo):
         '-hi', '--help-imode', action='store_true',
         help='show help on interactive mode')
     parser.add_argument(
-        '-V', '--version',
-        action='version',
-        version='%(prog)s ' + __version__)
+        '-V', '--version', action='version', version=verstr)
     parser.add_argument(
         '-v', action='store_true', dest='verbose',
         help='Enable verbose mode')
