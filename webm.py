@@ -54,6 +54,7 @@ import shlex
 import locale
 import tempfile
 import traceback
+import subprocess
 
 
 __title__ = 'webm.py'
@@ -68,16 +69,6 @@ _TEXT_TYPE = unicode if _PY2 else str
 _NUM_TYPES = (int, long, float) if _PY2 else (int, float)
 _input = raw_input if _PY2 else input
 _range = xrange if _PY2 else range
-
-
-if _WIN and _PY2:
-    try:
-        # Fix unicode subprocess arguments on Win+Py2:
-        # https://bugs.python.org/issue1759845
-        import subprocessww
-    except ImportError:
-        pass
-import subprocess
 
 
 # We can't use e.g. ``sys.stdout.encoding`` because user can redirect
@@ -131,6 +122,15 @@ if _PY2: FFMPEG_PATH = FFMPEG_PATH.decode(OS_ENCODING)
 
 MPV_PATH = os.getenv('WEBM_MPV', 'mpv')
 if _PY2: MPV_PATH = MPV_PATH.decode(OS_ENCODING)
+
+
+# Fix unicode subprocess arguments on Win+Py2:
+# https://bugs.python.org/issue1759845
+if _WIN and _PY2:
+    try:
+        import subprocessww
+    except ImportError:
+        pass
 
 
 def _ffmpeg(args, check_code=True, debug=False):
