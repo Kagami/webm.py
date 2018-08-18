@@ -20,7 +20,7 @@ Yet another bikeshed to encode WebM videos from CLI.
 
 Make sure to set `Add to PATH` option in Python for Windows installer.
 
-FFmpeg and mpv executables must be in PATH or set their location with
+FFmpeg and mpv executables must be in `PATH` or set their location with
 `WEBM_FFMPEG` and `WEBM_MPV` environment variables.
 
 ## Installation
@@ -32,7 +32,7 @@ pip install webm
 Or just save https://raw.githubusercontent.com/Kagami/webm.py/master/webm.py
 and put in your `PATH`.
 
-## Windows, Python 2 and non-ASCII filenames
+### Windows, Python 2 and non-ASCII filenames
 
 Unicode filenames won't work on Windows with Python 2 due to Python bugs. Use
 Python 3 if you can but if not an option set `PYTHONIOENCODING` environment
