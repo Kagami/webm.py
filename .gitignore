@@ -1,8 +1,5 @@
+*.pyc
+/.venv/
 /build/
 /dist/
 /webm.egg-info/
-*.pyc
-/.venv/
-
-/README.rst
-*.webm
