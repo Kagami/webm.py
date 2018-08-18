@@ -161,8 +161,8 @@ def _ffmpeg_output(args, check_code=True, debug=False):
     if check_code and p.returncode != 0:
         raise Exception('FFmpeg exited with error')
 
-    # XXX(Kagami): Always use UTF-8 because it's what FFmpeg uses, at
-    # least on Windows. Let's ignore non-UTF8 nix systems for now.
+    # XXX: Always use UTF-8 because it's what FFmpeg uses, at least on
+    # Windows. Let's ignore non-UTF8 nix systems for now.
     out = out.decode('utf-8', 'ignore')
     err = err.decode('utf-8', 'ignore')
     # Fix for Windows newlines.

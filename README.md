@@ -77,10 +77,7 @@ webm -cover -i pic.png -aa song.flac
 
 ### Interactive mode
 
-Pass `-p` flag to interactively select cut frargment/crop area with mpv. Demo:
-
-[![](https://i.imgur.com/JIogF33.png)](https://i.imgur.com/GjDWq3X.png)
-
+Pass `-p` flag to interactively select cut frargment and crop area with mpv.
 Show help for interactive mode:
 
 ```bash
