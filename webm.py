@@ -484,6 +484,10 @@ def process_options(caps):
         '-cn', action='store_true',
         help='skip any dependency/version checkings\n'
              'advanced option, use at your own risk')
+    parser.add_argument(
+        '-1', action='store_true', dest='singlepass',
+        help='use single pass encoding\n'
+             'advanced option, not recommended')
 
     # Additional input options validation.
     # NOTE: We ensure only minimal checkings here to not restrict the
@@ -948,9 +952,8 @@ def _escape_ffarg(arg):
     return "'{}'".format(arg)
 
 
-def _encode(options, caps, firstpass):
-    passn = 1 if firstpass else 2
-    logfile = options.logfile[:-6]
+def _encode(options, caps, passn):
+    firstpass = passn == 1
     speed = max(4, options.speed) if firstpass else options.speed
     vb = '{}k'.format(options.vb) if options.vb else '0'
     gop = 128 if options.cover is None else 9999
@@ -994,8 +997,13 @@ def _encode(options, caps, firstpass):
             astream = '{}:{}'.format(ainput, astream)
         args += ['-map', astream]
 
-    # Misc.
-    args += ['-pass', passn, '-passlogfile', logfile, '-sn']
+    # Passes.
+    if passn:
+        # FFmpeg will create one with "-0.log" suffix.
+        passlogfile = options.logfile[:-6]
+        args += ['-pass', passn, '-passlogfile', passlogfile]
+
+    # Logging.
     if options.verbose:
         args += ['-loglevel', 'verbose']
 
@@ -1078,6 +1086,10 @@ def _encode(options, caps, firstpass):
         if options.af is not None:
             args += ['-af', options.af]
 
+    # Subtitles.
+    # Avoid embedded subs because they are not supported in browsers.
+    args += ['-sn']
+
     # Metadata.
     if not firstpass:
         if options.mn:
@@ -1114,16 +1126,16 @@ def encode(options, caps):
     if options.vb is None:
         options.vb = _calc_video_bitrate(options)
     options.threads = multiprocessing.cpu_count()
-    # NOTE: Py3 always returns unicode for the second parameter, Py2
-    # returns bytes with bytes suffix/without suffix and unicode with
-    # unicode suffix. Since we use unicode_literals and provide suffix,
-    # it should always be unicode.
-    logfh, options.logfile = tempfile.mkstemp(suffix='-0.log')
-    os.close(logfh)
-    # NOTE: 2-pass encoding in cover mode might be faster than 1-pass.
-    # Though we may add option to use only single pass in future.
-    _encode(options, caps, firstpass=True)
-    _encode(options, caps, firstpass=False)
+    if not options.singlepass:
+        # NOTE: Py3 always returns unicode for the second parameter, Py2
+        # returns bytes with bytes suffix/without suffix and unicode with
+        # unicode suffix. Since we use unicode_literals and provide suffix,
+        # it should always be unicode.
+        logfh, options.logfile = tempfile.mkstemp(suffix='-0.log')
+        os.close(logfh)
+        _encode(options, caps, passn=1)
+    passn = 0 if options.singlepass else 2
+    _encode(options, caps, passn=passn)
 
 
 def print_stats(options, start):
