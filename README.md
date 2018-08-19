@@ -1,4 +1,4 @@
-# webm.py
+# webm.py [![PyPI version](https://badge.fury.io/py/webm.svg)](https://badge.fury.io/py/webm) [![Build Status](https://travis-ci.org/Kagami/webm.py.svg?branch=master)](https://travis-ci.org/Kagami/webm.py)
 
 Cross-platform command-line WebM converter.
 
