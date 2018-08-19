@@ -699,7 +699,7 @@ def run_interactive_mode(options):
     Press "KP3" after "c" to define the fragment from
     the marked time to the end of the video.
 
-    Select crop area with the mouse and adijust it precisely with
+    Select crop area with the mouse and adjust it precisely with
     KP4/KP8/KP6/KP2 (move crop area left/up/right/down) and
     KP7/KP9/-/+ (decrease/increase width/height).
     Press "a" when you finished with crop.
