@@ -15,20 +15,13 @@ dependencies:
   - FFmpeg 2+ compiled with libvpx and libopus (using: {ffmpegv})
   - mpv 0.17+ compiled with Lua support, optional (using: {mpvv})
 
-encoding modes:
-  - by default bitrate calculated to fit the output video to limit
-  - you may specify custom bitrate to use
-  - -crf option enables constrained quality mode
-  - -crf and -vb 0 enable constant quality mode
-
 examples:
-  - fit video to default limit: {stitle} -i in.mkv
-  - fit video to 6 MiB:         {stitle} -i in.mkv -l 6
-  - set video bitrate to 600k:  {stitle} -i in.mkv -vb 600
-  - constrained quality:        {stitle} -i in.mkv -crf 20
-  - constant quality:           {stitle} -i in.mkv -crf 20 -vb 0
-  - encode with AV1:            {stitle} -i in.mkv -av1
-  - encode with VP8 & Vorbis:   {stitle} -i in.mkv -vp8
+  - VP9 with default quality:   {stitle} -i in.mkv
+  - fit to 10 megabytes:        {stitle} -i in.mkv -l 10
+  - set 1000kbps video bitrate: {stitle} -i in.mkv -vb 1000
+  - change quality:             {stitle} -i in.mkv -crf 20
+  - encode to AV1:              {stitle} -i in.mkv -av1
+  - encode to VP8 & Vorbis:     {stitle} -i in.mkv -vp8
 
 use custom location of FFmpeg executable:
   - *nix:    WEBM_FFMPEG=/opt/ffmpeg/ffmpeg {stitle} -i in.mkv
@@ -355,7 +348,7 @@ def process_options(caps):
              'position may be either in seconds or in "hh:mm:ss[.xxx]" form')
     parser.add_argument(
         '-l', metavar='limit', type=float,
-        help='target filesize limit in mebibytes (default: 8)\n'
+        help='target filesize limit in mebibytes\n'
              '-l and -vb are mutually exclusive')
     parser.add_argument(
         '-av1', action='store_true',
@@ -381,7 +374,7 @@ def process_options(caps):
         help='target video bitrate in kbits')
     parser.add_argument(
         '-crf', metavar='crf', type=int,
-        help='set the video quality level [0..63]')
+        help='set the video quality level [0..63] (default: 25)')
     parser.add_argument(
         '-qmin', metavar='qmin', type=int,
         help='set minimum (best) video quality level [0..63]')
@@ -499,16 +492,18 @@ def process_options(caps):
     options = parser.parse_args(ARGS)
     if options.t is not None and options.to is not None:
         parser.error('-t and -to are mutually exclusive')
-    if options.vb is None:
-        if options.l is None:
-            options.l = 8
-        elif options.l <= 0:
-            parser.error('bad limit value')
-    else:
+    if options.vb:
         if options.l is not None:
             parser.error('-l and -vb are mutually exclusive')
         if options.vb < 0:
             parser.error('invalid video bitrate')
+    else:
+        if options.l is None:
+            options.vb = 0
+            if options.crf is None:
+                options.crf = 25
+        elif options.l <= 0:
+            parser.error('bad limit value')
     if options.av1 and options.vp8:
         parser.error('-av1 and -vp8 are mutually exclusive')
     if options.speed is None:

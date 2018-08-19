@@ -51,25 +51,22 @@ webm -h
 Examples:
 
 ```bash
-# Fit video to default limit
+# VP9 with default quality
 webm -i in.mkv
 
-# Fit video to 6 MiB
-webm -i in.mkv -l 6
+# Fit to 10 megabytes
+webm -i in.mkv -l 10
 
-# Set video bitrate to 600k
-webm -i in.mkv -vb 600
+# Set 1000kbps video bitrate
+webm -i in.mkv -vb 1000
 
-# Constrained quality
+# Change quality
 webm -i in.mkv -crf 20
 
-# Constant quality
-webm -i in.mkv -crf 20 -vb 0
-
-# Encode with AV1
+# Encode to AV1
 webm -i in.mkv -av1
 
-# Encode with VP8 & Vorbis
+# Encode to VP8 & Vorbis
 webm -i in.mkv -vp8
 ```
 
