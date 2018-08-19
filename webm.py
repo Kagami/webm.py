@@ -1010,13 +1010,13 @@ def _encode(options, caps, passn):
     if (options.vs is not None or
             getattr(options, 'as') is not None or
             options.aa is not None):
-        vstream = 'v:0' if options.vs is None else options.vs
+        vstream = 'v:0' if options.vs is None else _TEXT_TYPE(options.vs)
         if not vstream.startswith('['):
             vstream = '0:{}'.format(vstream)
         args += ['-map', vstream]
         ainput = 0 if options.aa is None else 1
         astream = getattr(options, 'as')
-        astream = 'a:0?' if astream is None else astream
+        astream = 'a:0?' if astream is None else _TEXT_TYPE(astream)
         if not astream.startswith('['):
             astream = '{}:{}'.format(ainput, astream)
         args += ['-map', astream]
@@ -1071,9 +1071,9 @@ def _encode(options, caps, passn):
         vfilters += [options.vfi]
     if options.vw is not None or options.vh is not None:
         scale = 'scale='
-        scale += '-1' if options.vw is None else options.vw
+        scale += '-1' if options.vw is None else _TEXT_TYPE(options.vw)
         scale += ':'
-        scale += '-1' if options.vh is None else options.vh
+        scale += '-1' if options.vh is None else _TEXT_TYPE(options.vh)
         vfilters += [scale]
     if options.sa is not None:
         sub_delay = 0
