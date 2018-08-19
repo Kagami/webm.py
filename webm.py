@@ -39,6 +39,7 @@ from __future__ import unicode_literals  # Install Python 2.7+ or 3.2+
 import os
 import re
 import sys
+import json
 import time
 import shlex
 import locale
@@ -645,38 +646,10 @@ def _doc2help(doc):
     return '\n'.join(lines)
 
 
-def _split_lua_params(s, delim=':'):
-    """
-    Deserialize colon-separated values passed from Lua.
-    Based on <http://stackoverflow.com/a/18092547>.
-    """
-    # TODO: Move to JSON intechanging format with mpv 0.9+. See this
-    # commit: <https://github.com/mpv-player/mpv/commit/daabbe3>.
-    if not s:
-        return
-    itr = iter(s)
-    param = ''
-    for ch in itr:
-        if ch == '\\':
-            try:
-                ch2 = next(itr)
-            except StopIteration:
-                raise Exception('badly escaped string')
-            else:
-                if ch2 == 'n':
-                    param += '\n'
-                else:
-                    param += ch2
-        elif ch == delim:
-            yield param
-            param = ''
-        else:
-            param += ch
-    yield param
-
-
-def _pos_int_check(s):
-    return re.match(r'-?\d+$', s) is not None
+def _decode_lua_line(prefix, line):
+    m = re.match(r'{}=(.+)'.format(prefix), line)
+    if m:
+        return json.loads(m.group(1))
 
 
 def _diff_dicts(defaults, d2):
@@ -736,64 +709,54 @@ def run_interactive_mode(options):
     out = _mpv_output(args, debug=True, catch_stdout=False)['stderr']
     cut = None
     crop = None
-    # Using the falseness of empty dict to simplify the code.
-    info = {}
+    info = None
     for line in reversed(out.split('\n')):
         if not cut:
-            cutm = re.match(
-                r'cut=(-1|\d+(?:\.\d+)?):(-1|\d+(?:\.\d+)?)$',
-                line)
-            if cutm:
-                cut = [round(float(v), 3) for v in cutm.groups()]
+            cut = _decode_lua_line('cut', line)
+            if cut:
+                cut = [round(v, 3) for v in cut]
                 if crop and info:
                     break
                 continue
         if not crop:
-            cropm = re.match(r'(crop=(\d+):(\d+):(\d+):(\d+))$', line)
-            if cropm:
-                crop = cropm.groups()
+            crop = _decode_lua_line('crop', line)
+            if crop:
                 if cut and info:
                     break
                 continue
-        if not info and line.startswith('info='):
-            params = list(_split_lua_params(line[5:]))
-            if len(params) != 6:
-                continue
-            vs, as_, audio_file, si, sub_file, sub_delay = params
-            if not all(_pos_int_check(s) for s in [vs, as_, si]):
-                continue
-            if not re.match(r'-?\d+(\.\d+)?$', sub_delay):
-                continue
-            vs, as_, si = int(vs), int(as_), int(si)
-            sub_delay = float(sub_delay)
-            info = _diff_dicts({
-                'as': -1, 'aa': '',
-                'si': -1, 'sa': '', 'sd': 0,
-            }, {
-                'vs': vs,
-                'as': as_, 'aa': audio_file,
-                'si': si, 'sa': sub_file, 'sd': sub_delay,
-            })
-            if info and cut and crop:
-                break
+        if not info:
+            info = _decode_lua_line('info', line)
+            if info:
+                info = _diff_dicts({
+                    'as': -1,
+                    'aa': '',
+                    'si': -1,
+                    'sa': '',
+                    'sd': 0,
+                }, {
+                    'vs': info['vs'],
+                    'as': info['as'],
+                    'aa': info['audio_file'],
+                    'si': info['si'],
+                    'sa': info['sub_file'],
+                    'sd': info['sub_delay'],
+                })
+                if info and cut and crop:
+                    break
 
-    # NOTE: We don't mind checking cut ranges and crop values because:
-    # 1) It should be already checked in Lua script
-    # 2) We will check some of them anyway in ``_get_input_info``
     print('='*50, file=sys.stderr)
     if cut:
         # ``-1`` is a special value and defines start/end of the file.
-        shift = '0' if cut[0] < 0 else _timestamp(cut[0])
-        endpos = 'EOF' if cut[1] < 0 else _timestamp(cut[1])
-        print('[CUT] {} - {} ({} - {})'.format(shift, endpos, cut[0], cut[1]),
-              file=sys.stderr)
+        shift = 'START' if cut[0] < 0 else _timestamp(cut[0])
+        endpos = 'END' if cut[1] < 0 else _timestamp(cut[1])
+        print('[CUT] {} - {}'.format(shift, endpos), file=sys.stderr)
     if crop:
-        print('[CROP] x1={}, y1={}, width={}, height={}'.format(
-                crop[3], crop[4], crop[1], crop[2]),
+        print('[CROP] x={}, y={}, width={}, height={}'.format(
+                  crop[2], crop[3], crop[0], crop[1]),
               file=sys.stderr)
     if info:
         changes = ', '.join('{}={}'.format(k, v) for k, v in info.items())
-        print('[DUMP] {}'.format(changes), file=sys.stderr)
+        print('[INFO] {}'.format(changes), file=sys.stderr)
 
     if cut or crop or info:
         try:
@@ -807,11 +770,13 @@ def run_interactive_mode(options):
                 if cut[1] >= 0:
                     options.to = cut[1]
             if crop:
-                options.vfi = crop[0] if options.vfi is None \
-                    else '{},{}'.format(options.vfi, crop[0])
-            if 'si' in info and 'sa' not in info:
-                info['sa'] = True
-            options.__dict__.update(info)
+                cropvf = 'crop={}:{}:{}:{}'.format(*crop)
+                options.vfi = cropvf if options.vfi is None \
+                    else '{},{}'.format(options.vfi, cropvf)
+            if info:
+                options.__dict__.update(info)
+                if 'si' in info and 'sa' not in info:
+                    options.sa = True
         else:
             sys.exit(1)
     else:
@@ -1237,18 +1202,19 @@ def main():
 
 
 MPV_SCRIPT = br"""
-require "mp.options"
+local options = require "mp.options"
 local assdraw = require "mp.assdraw"
+local utils = require "mp.utils"
 
-local options = {
+local o = {
     crop_alpha = 180,
     crop_x_step = 2,
     crop_y_step = 2,
 }
-read_options(options, "webm")
-local crop_alpha = options.crop_alpha
-local crop_x_step = options.crop_x_step
-local crop_y_step = options.crop_y_step
+options.read_options(o, "webm")
+local crop_alpha = o.crop_alpha
+local crop_x_step = o.crop_x_step
+local crop_y_step = o.crop_y_step
 
 local cut_pos = nil
 local crop_active = false
@@ -1266,8 +1232,8 @@ function log2user(str)
     mp.osd_message(str, 2)
 end
 
-function log2webm(str)
-    io.stderr:write(str .. "\n")
+function log2webm(prefix, v)
+    io.stderr:write(string.format("%s=%s\n", prefix, utils.format_json(v)))
     io.stderr:flush()
 end
 
@@ -1295,9 +1261,9 @@ function cut()
         if shift == endpos then
             log2user("Cut fragment is empty")
         else
-            log2webm(string.format("cut=%f:%f", shift, endpos))
+            log2webm("cut", { shift, endpos })
             log2user(string.format(
-                "Cut fragment: %s - %s",
+                "[CUT] %s - %s",
                 timestamp(shift), timestamp(endpos)))
             mp.commandv("osd-bar", "show_progress")
         end
@@ -1314,9 +1280,9 @@ function cut_from_start()
         if cut_pos == 0 then
             log2user("Cut fragment is empty")
         else
-            log2webm(string.format("cut=-1:%f", cut_pos))
+            log2webm("cut", { -1, cut_pos })
             log2user(string.format(
-                "Cut fragment: 0 - %s",
+                "[CUT] START - %s",
                 timestamp(cut_pos)))
             mp.commandv("osd-bar", "show_progress")
         end
@@ -1332,9 +1298,9 @@ function cut_to_end()
         if cut_pos == endpos then
             log2user("Cut fragment is empty")
         else
-            log2webm(string.format("cut=%f:-1", cut_pos))
+            log2webm("cut", { cut_pos, -1 })
             log2user(string.format(
-                "Cut fragment: %s - EOF",
+                "[CUT] %s - END",
                 timestamp(cut_pos)))
             mp.commandv("osd-bar", "show_progress")
         end
@@ -1473,11 +1439,9 @@ function crop()
     if crop_w == 0 or crop_h == 0 then
         log2user("Crop region is empty")
     else
-        log2webm(string.format(
-            "crop=%d:%d:%d:%d",
-            crop_w, crop_h, crop_x, crop_y))
+        log2webm("crop", { crop_w, crop_h, crop_x, crop_y })
         log2user(string.format(
-            "Defined crop area as x1=%d, y1=%d, width=%d, height=%d",
+            "[CROP] x=%d, y=%d, width=%d, height=%d",
             crop_x, crop_y, crop_w, crop_h))
     end
     clear_scr()
@@ -1588,14 +1552,6 @@ function get_sub_index(tracks, strack)
     end
 end
 
-function escape_filename(name)
-    if name then
-        return name:gsub("\\", "\\\\"):gsub(":", "\\:"):gsub("\n", "\\n")
-    else
-        return ""
-    end
-end
-
 function dump_info()
     local tracks = mp.get_property_native("track-list")
 
@@ -1604,7 +1560,7 @@ function dump_info()
     -- Just in case re-check everything; though if vid is defined,
     -- ff-index should be also available actually.
     if not vtrack or not vtrack["ff-index"] then
-        log2webm("Cannot find video track, seems like sound file")
+        log2user("Cannot find video track, seems like sound file")
         return
     end
     -- At least this value must be available.
@@ -1625,15 +1581,14 @@ function dump_info()
     sub_delay = -sub_delay
     if math.abs(sub_delay) < 0.01 then sub_delay = 0 end  -- Fix fp inaccuracy
 
-    log2webm(string.format(
-        "info=%d:%d:%s:%d:%s:%f",
-        vs,
-        as or -1,
-        escape_filename(audio_file),
-        si or -1,
-        escape_filename(sub_file),
-        sub_delay))
-
+    log2webm("info", {
+        vs = vs,
+        as = as or -1,
+        audio_file = audio_file or "",
+        si = si or -1,
+        sub_file = sub_file or "",
+        sub_delay = sub_delay,
+    })
     local changes = {}
     function ins(v) table.insert(changes, v) end
     ins("vs=" .. vs)
@@ -1642,7 +1597,7 @@ function dump_info()
     if si             then ins("si=" .. si) end
     if sub_file       then ins("sa=" .. sub_file) end
     if sub_delay ~= 0 then ins(string.format("sd=%.2f", sub_delay)) end
-    log2user("Dumped " .. table.concat(changes, ", "))
+    log2user("[INFO] " .. table.concat(changes, ", "))
 end
 
 mp.add_key_binding("c", "webm_cut", cut)
