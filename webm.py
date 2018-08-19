@@ -55,10 +55,10 @@ __license__ = 'CC0'
 
 _WIN = os.name == 'nt'
 _PY2 = sys.version_info[0] == 2
-_TEXT_TYPE = unicode if _PY2 else str
-_NUM_TYPES = (int, long, float) if _PY2 else (int, float)
-_input = raw_input if _PY2 else input
-_range = xrange if _PY2 else range
+_TEXT_TYPE = unicode if _PY2 else str  # noqa: F821
+_NUM_TYPES = (int, long, float) if _PY2 else (int, float)  # noqa: F821
+_input = raw_input if _PY2 else input  # noqa: F821
+_range = xrange if _PY2 else range  # noqa: F821
 
 
 # We can't use e.g. ``sys.stdout.encoding`` because user can redirect
@@ -102,23 +102,26 @@ else:
     # In Python2 ``sys.argv`` is a list of bytes. See:
     # <http://stackoverflow.com/q/4012571>,
     # <https://bugs.python.org/issue2128> for details.
-    if _PY2: ARGS = [arg.decode(OS_ENCODING) for arg in ARGS]
+    if _PY2:
+        ARGS = [arg.decode(OS_ENCODING) for arg in ARGS]
 
 
 # Python3 returns unicode here fortunately.
 FFMPEG_PATH = os.getenv('WEBM_FFMPEG', 'ffmpeg')
-if _PY2: FFMPEG_PATH = FFMPEG_PATH.decode(OS_ENCODING)
+if _PY2:
+    FFMPEG_PATH = FFMPEG_PATH.decode(OS_ENCODING)
 
 
 MPV_PATH = os.getenv('WEBM_MPV', 'mpv')
-if _PY2: MPV_PATH = MPV_PATH.decode(OS_ENCODING)
+if _PY2:
+    MPV_PATH = MPV_PATH.decode(OS_ENCODING)
 
 
 # Fix unicode subprocess arguments on Win+Py2:
 # https://bugs.python.org/issue1759845
 if _WIN and _PY2:
     try:
-        import subprocessww
+        import subprocessww  # noqa: F401
     except ImportError:
         pass
 
@@ -223,7 +226,7 @@ def get_capabilities():
         if not re.search(r'\bencoders:.*\blibvpx\b', codecout):
             raise Exception('FFmpeg is not compiled with libvpx support')
     if ('-vorbis' in ARGS or
-            ('-vp8' in ARGS and not '-opus' in ARGS)):
+            ('-vp8' in ARGS and '-opus' not in ARGS)):
         if not re.search(r'\bencoders:.*\blibvorbis\b', codecout):
             raise Exception('FFmpeg is not compiled with libvorbis support')
 
@@ -283,16 +286,16 @@ def _is_same_paths(path1, path2):
 def _vorbisq2bitrate(q):
     return {
         -1: 45,
-         0: 64,
-         1: 80,
-         2: 96,
-         3: 112,
-         4: 128,
-         5: 160,
-         6: 192,
-         7: 224,
-         8: 256,
-         9: 320,
+        0: 64,
+        1: 80,
+        2: 96,
+        3: 112,
+        4: 128,
+        5: 160,
+        6: 192,
+        7: 224,
+        8: 256,
+        9: 320,
         10: 500,
     }[q]
 
@@ -329,9 +332,9 @@ def process_options(caps):
     parser.add_argument(
         'outfile', nargs='?',
         help='output file, e.g. outfile.webm\n'
-            'defaults to infile_hh:mm:ss[.x]-hh:mm:ss[.x].webm if you\n'
-            'specified a starting/ending time or duration, otherwise\n'
-            'defaults to infile.webm')
+             'defaults to infile_hh:mm:ss[.x]-hh:mm:ss[.x].webm if you\n'
+             'specified a starting/ending time or duration, otherwise\n'
+             'defaults to infile.webm')
     parser.add_argument(
         '-ss', metavar='position',
         help='seek in input file to the given position\n'
@@ -511,7 +514,7 @@ def process_options(caps):
             options.vb = 0
             if options.crf is None:
                 options.crf = 25
-        elif options.l <= 0:
+        elif options.l <= 0:  # noqa: E741
             parser.error('bad limit value')
     if options.av1 and options.vp8:
         parser.error('-av1 and -vp8 are mutually exclusive')
@@ -626,7 +629,9 @@ def _parse_time(time):
 
 def _timestamp(duration):
     idur = int(duration)
-    ts = '{:02d}:{:02d}:{:02d}'.format(idur//3600, idur%3600//60, idur%60)
+    ts = '{:02d}:{:02d}:{:02d}'.format(idur // 3600,
+                                       idur % 3600 // 60,
+                                       idur % 60)
     frac = duration % 1
     if frac >= 0.1:
         ts += _TEXT_TYPE(frac)[1:3]
@@ -901,12 +906,12 @@ def _get_input_info(options):
     intitle = ''
     title = re.search(
         r'^\s*title\s*:\s*(.+)$', out,
-        re.MULTILINE|re.IGNORECASE)
+        re.MULTILINE | re.IGNORECASE)
     if title:
         intitle = title.group(1)
     album = re.search(
         r'^\s*album\s*:\s*(.+)$', out,
-        re.MULTILINE|re.IGNORECASE)
+        re.MULTILINE | re.IGNORECASE)
     if album and intitle:
         intitle = '{} - {}'.format(album.group(1), intitle)
 
@@ -1065,7 +1070,7 @@ def _encode(options, caps, passn):
     if options.vfi is not None:
         vfilters += [options.vfi]
     if options.vw is not None or options.vh is not None:
-        scale='scale='
+        scale = 'scale='
         scale += '-1' if options.vw is None else options.vw
         scale += ':'
         scale += '-1' if options.vh is None else options.vh
