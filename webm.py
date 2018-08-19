@@ -392,10 +392,6 @@ def process_options(caps):
         '-vfi', metavar='videofilters',
         help='insert video filters at the start of filter chain')
     parser.add_argument(
-        '-an', action='store_true',
-        help='strip audio from the output file\n'
-             'you cannot use -an with -ab, -aq, -aa, -as, -af')
-    parser.add_argument(
         '-opus', action='store_true',
         help='use Opus codec for audio\n'
              'default unless -vp8 is given\n'
@@ -403,6 +399,15 @@ def process_options(caps):
     parser.add_argument(
         '-vorbis', action='store_true',
         help='use Vorbis codec for audio')
+    parser.add_argument(
+        '-an', action='store_true',
+        help='strip audio from the output file\n'
+             'you cannot use -an with -ac, -ab, -aq, -aa, -as, -af')
+    parser.add_argument(
+        '-ac', action='store_true',
+        help='copy source audio to the output file\n'
+             'only Vorbis and Opus formats would work\n'
+             'you cannot use -ac with -ab, -aq, -af')
     parser.add_argument(
         '-ab', metavar='bitrate', type=float,
         help='Opus audio bitrate in kbits [6..510] (default: 128)\n'
@@ -532,14 +537,23 @@ def process_options(caps):
         options.opus = not options.vp8
         options.vorbis = options.vp8
     if options.an:
-        if (options.ab is not None or
+        if (options.ac is not None or
+                options.ab is not None or
                 options.aq is not None or
                 options.aa is not None or
                 getattr(options, 'as') is not None or
                 options.af is not None):
-            parser.error('you cannot use -an with -ab, -aq, -aa, -as, -af')
+            parser.error('you cannot use -an with '
+                         '-ac, -ab, -aq, -aa, -as, -af')
         # No audio, i.e. its bitrate is zero.
         options.ab = 0
+    elif options.ac:
+        if (options.ab is not None or
+                options.aq is not None or
+                options.af is not None):
+            parser.error('you cannot use -ac with -ab, -aq, -af')
+        # Estimated bitrate of the source audio track.
+        options.ab = 128
     else:
         if options.opus:
             if options.aq is not None:
@@ -976,7 +990,12 @@ def _encode(options, caps, passn):
     if options.foi2 is not None:
         args += shlex.split(options.foi2)
     if options.aa is not None:
+        if options.ss is not None:
+            args += ['-ss', options.ss]
         args += ['-i', options.aa]
+    if options.ss is not None and options.ac:
+        # Hack to make copied audio properly work in browsers.
+        args += ['-ss', '0']
     if (options.t is not None or
             options.to is not None or
             options.cover is not None):
@@ -1075,7 +1094,12 @@ def _encode(options, caps, passn):
         args += ['-vf', ','.join(vfilters)]
 
     # Audio.
-    if firstpass or options.an:
+    if options.ac:
+        # XXX: We don't actually check whether provided format is
+        # supported, it's up to the user. This will instantly fail on
+        # wrong format anyway.
+        args += ['-c:a', 'copy']
+    elif firstpass or options.an:
         args += ['-an']
     else:
         args += ['-ac', '2']
