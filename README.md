@@ -1,16 +1,14 @@
 # webm.py
 
-Yet another bikeshed to encode WebM videos from CLI.
+Cross-platform command-line WebM converter.
 
 ## Features
 
-* Encodes input video to WebM container with VP9 and Opus
-* Uses 2-pass encoding, has optional VP8/Vorbis and album art modes
-* Fits output file to the size limit by default
-* Allows to select video/audio streams and external audio track
-* Can burn subtitles into the video
-* Flexible set of options and ability to pass raw flags to FFmpeg
-* [Interactive mode](#interactive-mode) to cut/crop input video with mpv
+* No Python dependencies, single source file
+* Supports encoding to VP8, VP9 and AV1, with Opus or Vorbis
+* 2-pass encoding, user-friendly defaults, flexible set of options
+* Provides graphical [interactive mode](#interactive-mode) to cut/crop input video with mpv
+* Can burn subtitles, fit to limit, use external audio track and many more
 
 ## Requirements
 
@@ -68,11 +66,11 @@ webm -i in.mkv -crf 20
 # Constant quality
 webm -i in.mkv -crf 20 -vb 0
 
+# Encode with AV1
+webm -i in.mkv -av1
+
 # Encode with VP8 & Vorbis
 webm -i in.mkv -vp8
-
-# Make album art video
-webm -cover -i pic.png -aa song.flac
 ```
 
 ### Interactive mode

@@ -15,7 +15,7 @@ setup(
     author='Kagami Hiiragi',
     author_email='kagami@genshiken.org',
     url='https://github.com/Kagami/webm.py',
-    description='Encode WebM videos',
+    description='Cross-platform command-line WebM converter',
     long_description=long_description,
     long_description_content_type='text/markdown',
     license='CC0',
