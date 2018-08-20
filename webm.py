@@ -375,13 +375,13 @@ def process_options(caps):
         help='target video bitrate in kbits')
     parser.add_argument(
         '-crf', metavar='crf', type=int,
-        help='set video quality level [0/4..63] (default: 25)')
+        help='set the video quality level [0..63] (default: 25)')
     parser.add_argument(
         '-qmin', metavar='qmin', type=int,
-        help='set minimum (best) video quality level [0/4..63]')
+        help='set minimum (best) video quality level [0..63]')
     parser.add_argument(
         '-qmax', metavar='qmax', type=int,
-        help='set maximum (worst) video quality level [0/4..63]')
+        help='set maximum (worst) video quality level [0..63]')
     parser.add_argument(
         '-vs', metavar='videostream',
         help='video stream number to use (default: best)\n'
@@ -516,24 +516,29 @@ def process_options(caps):
             parser.error('bad limit value')
     if options.av1 and options.vp8:
         parser.error('-av1 and -vp8 are mutually exclusive')
+    options.vp9 = not options.av1 and not options.vp8
     if options.speed is None:
         options.speed = 4 if options.av1 else 0 if options.vp8 else 1
     elif not 0 <= options.speed <= 8:
         parser.error('compression effeciency must be in [0..8] range')
-    qminrange = 4 if options.vp8 else 0
-    qerr = lambda s: parser.error(s.format(qminrange))  # noqa: E731
-    if options.crf is not None and not qminrange <= options.crf <= 63:
-        qerr('quality level must be in [{}..63] range')
-    if options.qmin is not None and not qminrange <= options.qmin <= 63:
-        qerr('minimum quality level must be in [{}..63] range')
-    if options.qmax is not None and not qminrange <= options.qmax <= 63:
-        qerr('maximum quality level must be in [{}..63] range')
+    if options.crf is not None and not 0 <= options.crf <= 63:
+        parser.error('quality level must be in [0..63] range')
+    if options.qmin is not None and not 0 <= options.qmin <= 63:
+        parser.error('minimum quality level must be in [0..63] range')
+    if options.qmax is not None and not 0 <= options.qmax <= 63:
+        parser.error('maximum quality level must be in [0..63] range')
     if options.qmin is not None or options.qmax is not None:
-        qmin = qminrange if options.qmin is None else options.qmin
+        qmin = 0 if options.qmin is None else options.qmin
         crf = qmin if options.crf is None else options.crf
         qmax = 63 if options.qmax is None else options.qmax
         if not qmin <= crf <= qmax:
             parser.error('qmin <= crf <= qmax contraint violated')
+    if (options.vp8
+            and options.crf is not None
+            and options.crf < 4
+            and options.qmin is None):
+        # Set to 4 by default so needs a fix.
+        options.qmin = 0
     if options.opus and options.vorbis:
         parser.error('-opus and -vorbis are mutually exclusive')
     if not options.opus and not options.vorbis:
@@ -1025,7 +1030,7 @@ def _encode(options, caps, passn):
     ]
     if options.crf is not None:
         args += ['-crf', options.crf]
-        if options.crf == 0:
+        if options.vp9 and options.crf == 0:
             args += ['-lossless', '1']
     if options.qmin is not None:
         args += ['-qmin', options.qmin]
