@@ -691,7 +691,9 @@ def run_interactive_mode(options):
     finally:
         os.close(luafh)
 
-    args = ['--msg-level', 'all=error', '--script', luafile]
+    # --osc conflicts with crop area dragging.
+    # Possible to enable back with -po='--osc'
+    args = ['--msg-level', 'all=error', '--no-osc', '--script', luafile]
     if options.po is not None:
         args += shlex.split(options.po)
     args += [options.infile]
@@ -1258,7 +1260,7 @@ function cut()
         if shift == endpos then
             log2user("Cut fragment is empty")
         else
-            log2webm("cut", { shift, endpos })
+            log2webm("cut", {shift, endpos})
             log2user(string.format(
                 "[CUT] %s - %s",
                 timestamp(shift), timestamp(endpos)))
@@ -1277,7 +1279,7 @@ function cut_from_start()
         if cut_pos == 0 then
             log2user("Cut fragment is empty")
         else
-            log2webm("cut", { -1, cut_pos })
+            log2webm("cut", {-1, cut_pos})
             log2user(string.format(
                 "[CUT] START - %s",
                 timestamp(cut_pos)))
@@ -1295,7 +1297,7 @@ function cut_to_end()
         if cut_pos == endpos then
             log2user("Cut fragment is empty")
         else
-            log2webm("cut", { cut_pos, -1 })
+            log2webm("cut", {cut_pos, -1})
             log2user(string.format(
                 "[CUT] %s - END",
                 timestamp(cut_pos)))
@@ -1340,7 +1342,7 @@ function crop_init_at_center()
     end
 end
 
-function crop_drag_start()
+function crop_down()
     local x, y = mp.get_mouse_pos()
     if crop_active and
             math.min(crop_x1, crop_x2) <= x and
@@ -1359,7 +1361,7 @@ function crop_drag_start()
     end
 end
 
-function crop_drag_end()
+function crop_up()
     crop_resizing = false
     crop_moving = false
 end
@@ -1403,7 +1405,7 @@ function ensure_ranges()
     end
 end
 
-function crop_drag()
+function crop_move()
     if crop_resizing then
         crop_x2, crop_y2 = mp.get_mouse_pos()
         if crop_x2 < 0 then crop_x2 = 0 end
@@ -1436,7 +1438,7 @@ function crop()
     if crop_w == 0 or crop_h == 0 then
         log2user("Crop region is empty")
     else
-        log2webm("crop", { crop_w, crop_h, crop_x, crop_y })
+        log2webm("crop", {crop_w, crop_h, crop_x, crop_y})
         log2user(string.format(
             "[CROP] x=%d, y=%d, width=%d, height=%d",
             crop_x, crop_y, crop_w, crop_h))
@@ -1601,13 +1603,13 @@ mp.add_key_binding("c", "webm_cut", cut)
 mp.add_key_binding("KP1", "webm_cut_from_start", cut_from_start)
 mp.add_key_binding("KP3", "webm_cut_to_end", cut_to_end)
 
--- XXX: Don't know how to make `mp.add_key_binding` work with dragging.
-mp.set_key_bindings({{"mouse_btn0", crop_drag_end, crop_drag_start}}, "webm")
+local rp = {repeatable = true}
+-- Use deprecated API because add_key_binding can't handle dragging.
+mp.set_key_bindings({{"mbtn_left", nil, crop_down, crop_up}}, "webm")
 mp.enable_key_bindings("webm")
-mp.add_key_binding("mouse_move", "webm_crop_drag", crop_drag)
+mp.add_key_binding("mouse_move", crop_move)
 mp.add_key_binding("KP5", "webm_crop_init", crop_init_at_center)
 mp.add_key_binding("a", "webm_crop", crop)
-local rp = {repeatable = true}
 mp.add_key_binding("KP7", "webm_crop_w_dec", crop_width_dec, rp)
 mp.add_key_binding("KP9", "webm_crop_w_inc", crop_width_inc, rp)
 mp.add_key_binding("-", "webm_crop_h_dec", crop_height_dec, rp)
