@@ -318,7 +318,7 @@ def process_options(caps):
         formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument(
         '-hi', '--help-imode', action='store_true',
-        help='show help on interactive mode')
+        help='show help for interactive mode')
     parser.add_argument(
         '-V', '--version', action='version', version=verstr)
     parser.add_argument(
@@ -793,7 +793,7 @@ def print_interactive_help():
     You can redefine hotkeys by placing this to your input.conf and
     changing the key (first column):
 
-    # This is the defaults:
+    # webm.py hotkeys
     c   script_binding webm_cut
     KP1 script_binding webm_cut_from_start
     KP3 script_binding webm_cut_to_end
@@ -812,15 +812,14 @@ def print_interactive_help():
     You also can change some default options by creating webm.conf in your
     lua-settings directory (see <http://mpv.io/manual/stable/#configuration>):
 
-    # This is the defaults:
+    # webm.py options
     crop_alpha=180  # Transparency of crop area
     crop_x_step=2   # Precision of crop area adjusting from the keyboard
     crop_y_step=2   # Precision of crop area adjusting from the keyboard
     """
-    doc = '{}\n\n{}'.format(
+    print('{}\n\n{}'.format(
         _doc2help(run_interactive_mode.__doc__),
-        _doc2help(print_interactive_help.__doc__))
-    print(doc, file=sys.stderr)
+        _doc2help(print_interactive_help.__doc__)))
 
 
 def _get_input_info(options):
