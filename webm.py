@@ -675,9 +675,9 @@ def run_interactive_mode(options):
     Press "a" when you finished with crop.
     Also you can press KP5 to init crop area at the center of video.
 
-    Press "i" to dump info about currently selected video/audio/sub
-    tracks and subtitles delay from mpv.
-    Caution: it may redefine your appropriate passed options.
+    Press "d" to dump info about currently selected video/audio/sub
+    tracks and subtitles delay from mpv. Note that it may redefine
+    options you passed via CLI.
 
     Once you defined cut fragment and/or crop are, close the
     player and let the script do all hard work for calculating
@@ -805,7 +805,7 @@ def print_interactive_help():
     KP6 script_binding webm_crop_x_inc
     KP8 script_binding webm_crop_y_dec
     KP2 script_binding webm_crop_y_inc
-    i   script_binding webm_dump_info
+    d   script_binding webm_dump_info
 
     You also can change some default options by creating webm.conf in your
     lua-settings directory (see <http://mpv.io/manual/stable/#configuration>):
@@ -1617,7 +1617,7 @@ mp.add_key_binding("KP6", "webm_crop_x_inc", crop_x_inc, rp)
 mp.add_key_binding("KP8", "webm_crop_y_dec", crop_y_dec, rp)
 mp.add_key_binding("KP2", "webm_crop_y_inc", crop_y_inc, rp)
 
-mp.add_key_binding("i", "webm_dump_info", dump_info)
+mp.add_key_binding("d", "webm_dump_info", dump_info)
 """
 
 
