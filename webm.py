@@ -248,17 +248,14 @@ def get_capabilities():
         except Exception:
             if need_mpv:
                 raise Exception('cannot parse mpv version')
-        else:
-            # NOTE: Checking only for '^x.y.z', possible non-numeric symbols
-            # after 'z' don't matter.
-            if need_mpv and re.match(r'\d+\.\d+\.\d+', mpvv):
-                major, minor, _ = mpvv.split('.', 2)
-                if int(major) == 0 and int(minor) < 17:
-                    raise Exception('mpv version must be 0.17+, '
-                                    'using: {}'.format(mpvv))
-            else:
-                # Most probably version from git. Do nothing.
-                pass
+        if need_mpv:
+            if not re.match(r'\d+\.\d+\.\d+', mpvv):
+                raise Exception('cannot parse mpv version')
+            major, minor = mpvv.split('.', 2)[:2]
+            major, minor = int(major), int(minor)
+            if major == 0 and minor < 17:
+                raise Exception('mpv version must be 0.17+, '
+                                'using: {}'.format(mpvv))
 
     return {
         'pythonv': pythonv,
