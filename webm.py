@@ -545,7 +545,7 @@ def process_options(caps):
         options.opus = not options.vp8
         options.vorbis = options.vp8
     if options.an:
-        if (options.ac is not None or
+        if (options.ac or
                 options.ab is not None or
                 options.aq is not None or
                 options.aa is not None or
