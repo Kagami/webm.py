@@ -40,6 +40,7 @@ import os
 import re
 import sys
 import json
+import math
 import time
 import shlex
 import locale
@@ -1003,9 +1004,15 @@ def _encode(options, caps, passn):
 
     # Video.
     if options.av1:
+        # In AV1 tile-columns seems to be not constrained by video
+        # width. Or at least not that much compared to VP9.
+        tile_cols_approx = math.log(options.threads, 2)
+        # Make sure we saturated all available threads.
+        tile_cols = int(math.ceil(tile_cols_approx))
         args += [
             '-c:v', 'libaom-av1', '-cpu-used', speed,
             '-strict', 'experimental',
+            '-tile-columns', tile_cols,
         ]
     elif options.vp8:
         args += ['-c:v', 'libvpx', '-speed', speed]
