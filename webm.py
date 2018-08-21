@@ -948,8 +948,6 @@ def _encode(options, caps, passn):
     vb = '{}k'.format(options.vb) if options.vb else '0'
     gop = 128 if options.cover is None else 9999
     outfile = os.devnull if firstpass else options.outfile
-    # AV1 is not allowed in WebM yet.
-    outfmt = 'matroska' if options.av1 else 'webm'
 
     # Input.
     args = ['-hide_banner']
@@ -1000,7 +998,7 @@ def _encode(options, caps, passn):
 
     # Logging.
     if options.verbose:
-        args += ['-loglevel', 'verbose']
+        args += ['-v', 'verbose']
 
     # Video.
     if options.av1:
@@ -1115,13 +1113,14 @@ def _encode(options, caps, passn):
                 ctime = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
                 args += ['-metadata', 'creation_time={}'.format(ctime)]
 
+    # Output.
+    args += ['-y', '-f', 'webm']
+
     # Raw options.
     if options.fo is not None:
         args += shlex.split(options.fo)
 
-    # Output.
-    args += ['-f', outfmt, '-y', outfile]
-
+    args += [outfile]
     args = [_TEXT_TYPE(arg) for arg in args]
     _ffmpeg(args, debug=True)
 
