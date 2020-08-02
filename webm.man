@@ -1,0 +1,200 @@
+.Dd 27/07/2020
+.Dt Webm(1)
+.Os CROSS-PLATFORM
+.Sh NAME
+.Nm Webm.py -
+.Nm cross-platform command-line WebM converter.
+.Nd.
+.Sh SYNOPSIS
+.Nm
+.Op webm options
+.Sh DESCRIPTION
+.Ar Webm.py
+.Nm is a command-line Webm converter, used to generate Webm media files from other file formats.
+.Pp
+More information:
+.Bl
+.It Gitpage:
+https://github.com/Kagami/webm.py
+.El
+.Pp
+.Sh OPTIONS
+.Ar positional-arguments:
+  [outfile]
+outfile.webm defaults to infile_hh:mm:ss[.x]-hh:mm:ss[.x].webm if you specified a starting/ending time or duration, otherwise defaults to infile.webm
+.Pp
+.Nm -i
+input file, e.g. infile.mkv (required)
+.Pp
+.Nm -h, --help
+display help message
+.Pp
+.Nm -hi, --help-imode
+show help for interactive mode
+.Pp
+.Nm -V, --version
+show program's version number and exit
+.Pp
+.Nm -v
+Enable verbose mode
+.Pp
+.Nm -ss position
+seek in input file to the given position
+position may be either in seconds or in "hh:mm:ss[.xxx]" form
+.Pp
+.Nm -t duration
+limit the duration of data read from the input file
+duration may be a number in seconds, or in "hh:mm:ss[.xxx]" form
+.Pp
+.Nm -to [position]
+stop writing the output at position
+position may be either in seconds or in "hh:mm:ss[.xxx]" form
+.Pp
+.Nm -l [limit]
+target filesize limit in mebibytes
+.Pp
+.Nm -av1
+use AV1 codec for video
+.Pp
+.Nm -vp8
+use VP8 codec for video, implies -vorbis
+.Pp
+.Nm -speed [speed]
+set compression effeciency [0..8]
+by default 1 for VP9, 4 for AV1 and 0 for VP8
+.Pp
+.Nm -vw [width]
+output video width
+when setting either width or height
+aspect ration will be preserved unless you override both
+.Pp
+.Nm -vh [height]
+output video height
+.Pp
+.Nm -vb [bitrate]
+target video bitrate in kbits
+.Pp
+.Nm -crf [crf]
+set the video quality level [0..63] (default: 25)
+.Pp
+.Nm -qmin [qmin]
+set minimum (best) video quality level [0..63]
+.Pp
+.Nm -qmax [qmax]
+set maximum (worst) video quality level [0..63]
+.Pp
+.Nm -vs [videostream]
+video stream number to use (default: best)
+absolute value obtainable with ffmpeg .Nm -i infile
+.Pp
+.Nm -vf videofilters
+additional video filters to use
+.Pp
+.Nm -vfi videofilters
+insert video filters at the start of filter chain
+.Pp
+.Nm -opus
+use Opus codec for audio default unless .Nm -vp8 is given
+-opus and -vorbis are mutually exclusive
+.Pp
+.Nm -vorbis
+use Vorbis codec for audio
+.Pp
+.Nm -an
+strip audio from the output file
+you cannot use .Nm -an with -ac, -ab, -aq, -aa, -as, -af
+.Pp
+.Nm -ac
+copy source audio to the output file
+only Vorbis and Opus formats would work
+you cannot use .Nm -ac with -ab, -aq, -af
+.Pp
+.Nm -ab bitrate
+Opus audio bitrate in kbits [6..510] (default: 128)
+you cannot use .Nm -ab with -vorbis
+.Pp
+.Nm -aq quality
+Vorbis audio quality [-1..10] (default: 4)
+you cannot use .Nm -aq with -opus
+.Pp
+.Nm -aa audiofile
+add (use) external audio file
+if specified, its first audio stream will be muxed into
+resulting file unless .Nm -as is also given
+.Pp
+.Nm -as audiostream
+audio stream number to use (default: best)
+that's absolute value obtainable with ffmpeg .Nm -i infile
+.Pp
+.Nm -af audiofilters
+audio filters to use
+.Pp
+.Nm -sa [subfile]
+add (burn) subtitles to the video
+will use subtitles from the given file or from the input
+video if filename is omitted
+.Pp
+.Nm -si subindex
+subtitle index to use (default: best)
+note: it's not the global stream number, but the index of
+subtitle stream across other subtitles
+.Pp
+.Nm -sd subdelay
+delay subtitles by this number of seconds
+note that subtitles delay in mpv is negated, i.e.
+.Nm --sub-delay=1 in mpv actually shift subtitles backward;
+you should pass .Nm -1 to this option to shift backward
+.Pp
+.Nm -sf subforcestyle
+override default style of the subtitles
+.Pp
+.Nm -p
+run player (mpv) in interactive mode to cut and crop video
+you cannot use .Nm -p with -ss, -t, -to
+.Pp
+.Nm -po mpvopts
+additional raw player (mpv) options
+example: .Nm -po='--mute' (equal sign is mandatory)
+.Pp
+.Nm -cover [loopopts]
+enable album cover mode, encode song with album art
+first input should be image, .Nm -aa must be provided
+by default '.Nm -r 1 -loop 1' is used to loop the art
+you cannot use .Nm -cover with -sa, -p
+.Pp
+.Nm -mt [metatitle]
+set title of output file (default: title of input video)
+will use output filename without extension if argument
+is omitted
+.Pp
+.Nm -mc
+add creation time to the output file
+.Pp
+.Nm -mn
+strip metadata from the output file
+you cannot use .Nm -mn with -mt, -mc
+.Pp
+.Nm -fo ffmpegopts
+additional raw FFmpeg options
+example: .Nm -fo='-aspect 16:9' (equal sign is mandatory)
+.Pp
+.Nm -foi ffmpegopts
+raw FFmpeg options to insert before first input
+example: .Nm -foi='-loop 1' (equal sign is mandatory)
+.Pp
+.Nm -foi2 ffmpegopts
+raw FFmpeg options to insert after first input
+example: .Nm -foi2='-itsoffset 10' (equal sign is mandatory)
+.Pp
+.Nm -cn
+skip any dependency/version checkings
+advanced option, use at your own risk
+.Pp
+.Nm -1
+use single pass encoding
+advanced option, not recommended
+.Pp
+.Sh AUTHORS
+Kagami Hiiragi
+.Sh SEE ALSO
+User interface equivalent https://aur.archlinux.org/packages/boram/
